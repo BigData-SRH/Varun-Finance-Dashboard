@@ -240,10 +240,10 @@ pages
 
 ## 11. Using This Template for Student Projects
 
-Students can:
+You can:
 
 - Fork this repository  
-- Replace the example data with their own dataset  
+- Replace the example data with your own dataset  
 - Add new multipage views  
 - Build data dashboards or analysis tools  
 - Submit their Streamlit project as a reproducible environment  
