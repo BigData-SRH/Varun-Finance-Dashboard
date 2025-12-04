@@ -1,257 +1,179 @@
-# Streamlit App Template
+# 📈 Finance Dashboard
 
-This repository contains a clean starter template for building a multi-page Streamlit web application.  
-It is designed for teaching, student projects, and anyone who needs a clear, minimal structure to start from.
+An interactive Streamlit dashboard for analyzing NSE (National Stock Exchange of India) indices and their constituent stocks. Built with Python, powered by data from Yahoo Finance.
 
-The template includes:
-
-- A Home page (`app.py`)
-- A multi-page setup (`pages/` folder)
-- An example dataset (`data/example_data.csv`)
-- A simple theme configuration (`.streamlit/config.toml`)
-- A complete environment setup guide (steps below)
-- A `requirements.txt` file for reproducible installs
+![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-red.svg)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 ---
 
-## 1. Prerequisites
+## 📑 Table of Contents
 
-You will need:
-
-- Python 3.9 or higher  
-- pip (Python package manager)  
-- Optional: Git, if you want to clone the repository instead of downloading the ZIP file  
-
-Check your versions:
-
-```bash
-python --version
-pip --version
-```
+- [Key Performance Indicators](#-key-performance-indicators-kpis)
+- [Getting Started](#-getting-started)
+- [Docker Deployment](#-docker-deployment)
+- [Indices Covered](#-indices-covered)
+- [Dashboard Pages](#️-dashboard-pages)
+- [Tech Stack](#️-tech-stack)
+- [Project Structure](#-project-structure)
+- [Configuration](#️-configuration)
+- [Disclaimer](#️-disclaimer)
+- [License](#-license)
 
 ---
 
-## 2. Get the project
+## 📊 Key Performance Indicators (KPIs)
 
-### Option A — Clone the repository
-
-```bash
-git clone https://github.com/YOUR-USERNAME/streamlit-app-template.git
-cd streamlit-app-template
-```
-
-### Option B — Download ZIP
-
-1. Click "Code" → "Download ZIP"
-2. Extract the ZIP file
-3. Open the folder in your code editor
+| Category | KPIs |
+|----------|------|
+| **Returns** | Total Return, CAGR, Win Rate |
+| **Risk** | Annualized Volatility, Maximum Drawdown, Beta |
+| **Risk-Adjusted** | Sharpe Ratio, Sortino Ratio, Calmar Ratio |
+| **Fundamentals** | PE Ratio, PB Ratio, Dividend Yield, Market Cap |
 
 ---
 
-## 3. Create a virtual environment (recommended)
-
-This isolates your project dependencies so they do not affect system-wide packages.
-
-Inside the project folder:
+## 🚀 Getting Started
 
 ```bash
-python -m venv .venv
-```
+# Clone the repository
+git clone https://github.com/BigData-SRH/Varun-Finance-Dashboard.git
+cd Varun-Finance-Dashboard
 
-### Activate the virtual environment
-
-macOS / Linux:
-
-```bash
-source .venv/bin/activate
-```
-
-Windows (PowerShell):
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-When activated, your terminal will show a prefix similar to:
-
-```
-(.venv)
-```
-
----
-
-## 4. Install dependencies
-
-With the virtual environment activated:
-
-```bash
-pip install --upgrade pip
+# Install dependencies
 pip install -r requirements.txt
+
+# Run the dashboard
+streamlit run Home.py
 ```
 
-This installs Streamlit, pandas, numpy, and any other required packages.
+The dashboard will open at `http://localhost:8501`
 
 ---
 
-## 5. Run the Streamlit app
+## 🐳 Docker Deployment
 
-Run the main entry file:
+### Using Docker Compose (Recommended)
 
 ```bash
-streamlit run app.py
+# Build and run
+docker-compose up --build
+
+# Run in detached mode
+docker-compose up -d
+
+# Stop the container
+docker-compose down
 ```
 
-Streamlit will open a local server, typically at:
+### Using Docker Directly
 
+```bash
+# Build the image
+docker build -t varun-finance-dashboard .
+
+# Run the container
+docker run -p 8501:8501 varun-finance-dashboard
 ```
-http://localhost:8501
-```
 
-If the browser does not open automatically, copy and paste this URL into your browser.
-
-Use the sidebar navigation to switch between:
-
-- Home  
-- Overview  
-- Data Explorer  
-- About  
+The dashboard will be available at `http://localhost:8501`
 
 ---
 
-## 6. Project Structure
+## 📈 Indices Covered
 
-```text
-streamlit-app-template/
-├─ app.py
-├─ pages/
-│  ├─ 01_Overview.py
-│  ├─ 02_Data_Explorer.py
-│  └─ 03_About.py
-├─ requirements.txt
-├─ .gitignore
-├─ README.md
-├─ data/
-│  └─ example.csv
-└─ .streamlit/
-   └─ config.toml
-```
+| Index | Ticker | Stocks | Description |
+|-------|--------|--------|-------------|
+| **Nifty 50** | ^NSEI | 50 | Top 50 companies by market cap |
+| **Nifty Bank** | ^NSEBANK | 12 | Major banking sector stocks |
+| **Nifty IT** | ^CNXIT | 10 | Leading IT sector companies |
 
-### Description of folders and files
-
-| Path | Explanation |
-|------|-------------|
-| `app.py` | Main entry point for the app (Home page) |
-| `pages/` | Additional pages; Streamlit automatically detects them |
-| `data/` | Contains example datasets |
-| `.streamlit/config.toml` | Optional theme and server configuration |
-| `requirements.txt` | List of Python dependencies |
-| `.gitignore` | Specifies which files Git should ignore |
-| `README.md` | This documentation file |
+**Analysis Period:** January 2015 – Present
 
 ---
 
-## 7. Adding New Pages
+## 🖥️ Dashboard Pages
 
-Streamlit automatically adds any `.py` file inside the `pages/` directory as a page.
+### Home
+- Real-time index cards with price and daily change
+- Normalized performance comparison with **time period filters** (1W, 1M, 6M, 1Y, 5Y, MAX)
+- Correlation heatmap between indices
+- Detailed analysis for selected index (CAGR, Volatility, Sharpe, Drawdown)
+- **Global Market Context**: Compare Indian indices against S&P 500, NASDAQ, FTSE 100, DAX, Nikkei 225, and Hang Seng
+- **Educational Section**: Learn what each metric means and how to invest in indices via ETFs and Index Funds
 
-To add a new page:
+### Stock Explorer
+- Filter by index and sector
+- Individual stock KPIs: CAGR, Volatility, Beta, PE Ratio, Dividend Yield
+- **Corporate Events** tab: Dividend history, stock splits, upcoming earnings
+- Risk-return scatter visualization
 
-1. Create a new file in `pages/`
-2. Use a filename with a numeric prefix to control order, for example:
+### Portfolio
+- Top performers by returns, Sharpe ratio, and dividends
+- Value opportunities (Low PE with strong CAGR)
+- AI-suggested diversified portfolio based on composite scoring
+
+### About
+- Methodology documentation
+- Data quality scoring system
+- Full list of index constituents
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework:** Streamlit
+- **Data Source:** Yahoo Finance via [yfinance](https://github.com/ranaroussi/yfinance)
+- **Visualization:** Plotly
+- **Analysis:** Pandas, NumPy
+
+---
+
+## 📁 Project Structure
 
 ```
-pages/04_Analysis.py
+├── Home.py                 # Main entry point
+├── Dockerfile              # Docker image configuration
+├── docker-compose.yml      # Docker Compose orchestration
+├── .dockerignore           # Docker build exclusions
+├── requirements.txt        # Python dependencies
+├── pages/
+│   ├── 02_Stock_Explorer.py
+│   ├── 03_Portfolio.py
+│   └── 04_About.py
+├── utils/
+│   ├── config.py           # Configuration (dates, indices, colors)
+│   ├── data_fetcher.py     # Yahoo Finance API wrapper
+│   ├── metrics.py          # Financial calculations
+│   ├── quality.py          # Data quality scoring
+│   └── charts.py           # Plotly chart functions
+└── README.md
 ```
 
-3. Add content such as:
+---
+
+## ⚙️ Configuration
+
+Edit `utils/config.py` to customize:
 
 ```python
-import streamlit as st
-
-st.title("New Page")
-st.write("This is a custom page.")
+START_DATE = '2015-01-01'      # Analysis start date
+RISK_FREE_RATE = 0.06          # 6% annual rate
+CONSTITUENTS = {...}           # Index member stocks
 ```
-
-4. Run the app again:
-
-```bash
-streamlit run app.py
-```
-
-The new page will appear in the sidebar.
 
 ---
 
-## 8. Updating Dependencies
+## ⚠️ Disclaimer
 
-If you install additional libraries, update the requirements file:
+This dashboard is for **educational and informational purposes only**. It does not constitute financial advice. Past performance is not indicative of future results. Always consult a qualified financial advisor before making investment decisions.
 
-```bash
-pip install NEW_PACKAGE
-pip freeze > requirements.txt
-```
-
-This ensures others can reproduce your environment.
+Market data is sourced from Yahoo Finance via the [yfinance](https://github.com/ranaroussi/yfinance) library. This project is not affiliated with or endorsed by Yahoo.
 
 ---
 
-## 9. Deployment (Short Overview)
+## 📜 License
 
-You can deploy this Streamlit app to:
-
-- Streamlit Community Cloud  
-- Render  
-- HuggingFace Spaces  
-- Fly.io  
-- Your own server using Docker  
-
-For most classroom or project cases, running locally with:
-
-```bash
-streamlit run app.py
-```
-
-is sufficient.
-
----
-
-## 10. Troubleshooting
-
-### Streamlit command not found  
-Your virtual environment may not be activated.
-
-### Example dataset not found  
-Ensure the file exists at:
-
-```
-data/example_data.csv
-```
-
-### Pages do not appear  
-The folder must be named exactly:
-
-```
-pages
-```
-
-(lowercase)
-
----
-
-## 11. Using This Template for Student Projects
-
-You can:
-
-- Fork this repository  
-- Replace the example data with your own dataset  
-- Add new multipage views  
-- Build data dashboards or analysis tools  
-- Submit their Streamlit project as a reproducible environment  
-
-This ensures consistency across all student groups.
-
----
-
-## 12. License
-
-MIT License (or replace with your own license)
+MIT License © 2025

@@ -1,0 +1,138 @@
+"""
+Index Analysis Page
+"""
+
+import streamlit as st
+import pandas as pd
+
+from utils import (
+    INDICES, RISK_FREE_RATE,
+    load_all_index_data, calculate_all_metrics,
+    plot_cumulative_returns, plot_drawdown, plot_annual_returns,
+    plot_rolling_volatility, plot_correlation_matrix
+)
+
+st.set_page_config(page_title="Index Analysis", page_icon="📈", layout="wide")
+
+st.title("📈 Index Analysis")
+st.markdown("Detailed performance analysis for Indian market indices.")
+
+# =============================================================================
+# LOAD DATA
+# =============================================================================
+
+with st.spinner("Loading index data..."):
+    index_data = load_all_index_data()
+
+if not index_data:
+    st.error("Failed to load index data.")
+    st.stop()
+
+# =============================================================================
+# INDEX SELECTOR
+# =============================================================================
+
+selected_index = st.selectbox(
+    "Select Index",
+    list(INDICES.keys()),
+    index=0
+)
+
+data = index_data[selected_index]
+metrics = calculate_all_metrics(data, RISK_FREE_RATE)
+
+# =============================================================================
+# METRICS ROW
+# =============================================================================
+
+st.subheader(f"{selected_index} - Key Metrics")
+
+col1, col2, col3, col4, col5 = st.columns(5)
+
+col1.metric("CAGR", f"{metrics['CAGR (%)']:.2f}%")
+col2.metric("Volatility", f"{metrics['Volatility (%)']:.2f}%")
+col3.metric("Sharpe Ratio", f"{metrics['Sharpe Ratio']:.2f}")
+col4.metric("Sortino Ratio", f"{metrics['Sortino Ratio']:.2f}")
+col5.metric("Max Drawdown", f"{metrics['Max Drawdown (%)']:.2f}%")
+
+st.markdown("---")
+
+# =============================================================================
+# CHARTS
+# =============================================================================
+
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📈 Performance", "📉 Drawdown", "📊 Annual Returns", "🌡️ Volatility"
+])
+
+with tab1:
+    fig = plot_cumulative_returns(
+        {selected_index: data},
+        f"{selected_index} - Cumulative Returns"
+    )
+    st.plotly_chart(fig, width='stretch')
+
+with tab2:
+    fig = plot_drawdown(data, selected_index)
+    st.plotly_chart(fig, width='stretch')
+
+with tab3:
+    fig = plot_annual_returns(data, selected_index)
+    st.plotly_chart(fig, width='stretch')
+
+with tab4:
+    window = st.slider("Rolling Window (days)", 30, 252, 90, key="vol_window")
+    fig = plot_rolling_volatility(data, selected_index, window)
+    st.plotly_chart(fig, width='stretch')
+
+st.markdown("---")
+
+# =============================================================================
+# CORRELATION ANALYSIS
+# =============================================================================
+
+st.header("🔗 Index Correlations")
+
+returns_df = pd.DataFrame({
+    name: d['Daily_Return'] for name, d in index_data.items()
+}).dropna()
+
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    fig = plot_correlation_matrix(returns_df)
+    st.plotly_chart(fig, width='stretch')
+
+with col2:
+    st.subheader("Correlation Values")
+    corr = returns_df.corr()
+    st.dataframe(
+        corr.style.format("{:.3f}").background_gradient(cmap='RdBu_r', vmin=-1, vmax=1),
+        width='stretch'
+    )
+    
+    st.markdown("""
+    **Interpretation:**
+    - Values close to 1.0 indicate strong positive correlation
+    - Values close to 0 indicate low correlation (good for diversification)
+    - Values close to -1.0 indicate inverse correlation
+    """)
+
+# =============================================================================
+# ALL INDICES COMPARISON
+# =============================================================================
+
+st.markdown("---")
+st.header("📊 All Indices Comparison")
+
+# Multi-select for comparison
+selected_indices = st.multiselect(
+    "Select indices to compare",
+    list(INDICES.keys()),
+    default=list(INDICES.keys())
+)
+
+if selected_indices:
+    comparison_data = {k: v for k, v in index_data.items() if k in selected_indices}
+    fig = plot_cumulative_returns(comparison_data, "Comparative Performance")
+    st.plotly_chart(fig, width='stretch')

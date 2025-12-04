@@ -1,4 +1,17 @@
-streamlit>=1.37.0
+# Indian Market Analysis - Requirements
+# =====================================
+
+# Core
+streamlit>=1.28.0
 pandas>=2.0.0
 numpy>=1.24.0
+matplotlib
 
+# Data
+yfinance>=0.2.40
+
+# Visualization
+plotly>=5.15.0
+
+# Optional (for development)
+# ipython>=8.0.0
