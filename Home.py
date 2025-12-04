@@ -30,30 +30,20 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* KPI Card Styles - Lighter gradients */
+    /* KPI Card Styles - Clean white/neutral */
     .kpi-card {
-        background: linear-gradient(135deg, #a8c0ff 0%, #c4b5fd 100%);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 16px;
         padding: 1.25rem;
         color: #1e293b;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(168, 192, 255, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         transition: transform 0.2s ease;
     }
     .kpi-card:hover {
         transform: translateY(-3px);
-    }
-    .kpi-card.green {
-        background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
-        box-shadow: 0 4px 15px rgba(167, 243, 208, 0.3);
-    }
-    .kpi-card.blue {
-        background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%);
-        box-shadow: 0 4px 15px rgba(186, 230, 253, 0.3);
-    }
-    .kpi-card.teal {
-        background: linear-gradient(135deg, #99f6e4 0%, #5eead4 100%);
-        box-shadow: 0 4px 15px rgba(153, 246, 228, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
     .kpi-label {
         font-size: 0.8rem;
@@ -221,7 +211,7 @@ def main():
     
     with col2:
         st.markdown(f"""
-        <div class="kpi-card green">
+        <div class="kpi-card">
             <div class="kpi-label">📊 Best CAGR</div>
             <div class="kpi-value">{all_metrics[best_cagr_idx]['CAGR (%)']:.2f}%</div>
             <div class="kpi-index">{best_cagr_idx}</div>
@@ -231,7 +221,7 @@ def main():
     
     with col3:
         st.markdown(f"""
-        <div class="kpi-card blue">
+        <div class="kpi-card">
             <div class="kpi-label">⚖️ Best Sharpe Ratio</div>
             <div class="kpi-value">{all_metrics[best_sharpe_idx]['Sharpe Ratio']:.2f}</div>
             <div class="kpi-index">{best_sharpe_idx}</div>
@@ -241,7 +231,7 @@ def main():
     
     with col4:
         st.markdown(f"""
-        <div class="kpi-card teal">
+        <div class="kpi-card">
             <div class="kpi-label">🛡️ Lowest Volatility</div>
             <div class="kpi-value">{all_metrics[lowest_vol_idx]['Volatility (%)']:.2f}%</div>
             <div class="kpi-index">{lowest_vol_idx}</div>
