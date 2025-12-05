@@ -7,6 +7,8 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from datetime import datetime
+import time
+import random
 
 from utils import (
     INDICES, CONSTITUENTS, COLORS, RISK_FREE_RATE,
@@ -16,6 +18,25 @@ from utils import (
     plot_cumulative_returns, plot_drawdown, plot_annual_returns,
     plot_risk_return_scatter
 )
+
+
+def retry_on_rate_limit(func, *args, max_retries=3, base_delay=3.0, **kwargs):
+    """Execute function with retry on rate limit errors."""
+    last_exception = None
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            error_str = str(e).lower()
+            if "429" in str(e) or "rate limit" in error_str or "too many requests" in error_str:
+                last_exception = e
+                delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                time.sleep(delay)
+            else:
+                raise
+    if last_exception:
+        raise last_exception
+    return func(*args, **kwargs)
 
 st.set_page_config(page_title="Stock Explorer", page_icon="🏢", layout="wide")
 
@@ -65,47 +86,59 @@ def compute_stock_metrics(_index_data, _stock_data, _stock_info):
 def fetch_corporate_events(ticker: str):
     """Fetch corporate events (dividends, splits, upcoming events) for a stock."""
     try:
-        stock = yf.Ticker(ticker)
-        
-        # Get dividends
-        dividends = stock.dividends
-        if dividends is not None and len(dividends) > 0:
-            div_df = dividends.reset_index()
-            div_df.columns = ['Date', 'Amount (₹)']
-            div_df['Date'] = pd.to_datetime(div_df['Date']).dt.tz_localize(None)
-            div_df = div_df.sort_values('Date', ascending=False)
-        else:
-            div_df = pd.DataFrame(columns=['Date', 'Amount (₹)'])
-        
-        # Get stock splits
-        splits = stock.splits
-        if splits is not None and len(splits) > 0:
-            split_df = splits.reset_index()
-            split_df.columns = ['Date', 'Ratio']
-            split_df['Date'] = pd.to_datetime(split_df['Date']).dt.tz_localize(None)
-            split_df['Ratio'] = split_df['Ratio'].apply(lambda x: f"{int(x)}:1" if x >= 1 else f"1:{int(1/x)}")
-            split_df = split_df.sort_values('Date', ascending=False)
-        else:
-            split_df = pd.DataFrame(columns=['Date', 'Ratio'])
-        
-        # Get calendar (upcoming events)
-        calendar = stock.calendar
-        upcoming = {}
-        if calendar:
-            if 'Earnings Date' in calendar:
-                earnings_dates = calendar['Earnings Date']
-                if isinstance(earnings_dates, list) and len(earnings_dates) > 0:
-                    upcoming['Next Earnings'] = earnings_dates[0]
-            if 'Ex-Dividend Date' in calendar:
-                upcoming['Ex-Dividend Date'] = calendar['Ex-Dividend Date']
-            if 'Earnings Average' in calendar:
-                upcoming['Expected EPS'] = calendar['Earnings Average']
-            if 'Revenue Average' in calendar:
-                upcoming['Expected Revenue'] = calendar['Revenue Average']
-        
-        return div_df, split_df, upcoming
+        return _fetch_corporate_events_internal(ticker)
     except Exception as e:
+        error_str = str(e).lower()
+        if "429" in str(e) or "rate limit" in error_str:
+            # Return empty data with rate limit flag
+            return pd.DataFrame(), pd.DataFrame(), {"_rate_limited": True}
         return pd.DataFrame(), pd.DataFrame(), {}
+
+
+def _fetch_corporate_events_internal(ticker: str):
+    """Internal function to fetch corporate events with retry logic."""
+    stock = yf.Ticker(ticker)
+
+    # Add small delay to avoid rate limiting
+    time.sleep(random.uniform(0.3, 0.6))
+
+    # Get dividends
+    dividends = stock.dividends
+    if dividends is not None and len(dividends) > 0:
+        div_df = dividends.reset_index()
+        div_df.columns = ['Date', 'Amount (₹)']
+        div_df['Date'] = pd.to_datetime(div_df['Date']).dt.tz_localize(None)
+        div_df = div_df.sort_values('Date', ascending=False)
+    else:
+        div_df = pd.DataFrame(columns=['Date', 'Amount (₹)'])
+
+    # Get stock splits
+    splits = stock.splits
+    if splits is not None and len(splits) > 0:
+        split_df = splits.reset_index()
+        split_df.columns = ['Date', 'Ratio']
+        split_df['Date'] = pd.to_datetime(split_df['Date']).dt.tz_localize(None)
+        split_df['Ratio'] = split_df['Ratio'].apply(lambda x: f"{int(x)}:1" if x >= 1 else f"1:{int(1/x)}")
+        split_df = split_df.sort_values('Date', ascending=False)
+    else:
+        split_df = pd.DataFrame(columns=['Date', 'Ratio'])
+
+    # Get calendar (upcoming events)
+    calendar = stock.calendar
+    upcoming = {}
+    if calendar:
+        if 'Earnings Date' in calendar:
+            earnings_dates = calendar['Earnings Date']
+            if isinstance(earnings_dates, list) and len(earnings_dates) > 0:
+                upcoming['Next Earnings'] = earnings_dates[0]
+        if 'Ex-Dividend Date' in calendar:
+            upcoming['Ex-Dividend Date'] = calendar['Ex-Dividend Date']
+        if 'Earnings Average' in calendar:
+            upcoming['Expected EPS'] = calendar['Earnings Average']
+        if 'Revenue Average' in calendar:
+            upcoming['Expected Revenue'] = calendar['Revenue Average']
+
+    return div_df, split_df, upcoming
 
 
 with st.spinner("Loading data..."):
@@ -216,7 +249,12 @@ if selected_stock and selected_stock in stock_data:
         # Fetch corporate events
         with st.spinner("Loading corporate events..."):
             div_df, split_df, upcoming = fetch_corporate_events(selected_stock)
-        
+
+        # Check for rate limiting
+        if upcoming.get("_rate_limited"):
+            st.warning("Yahoo Finance rate limit reached. Corporate events data temporarily unavailable. Please try again in a few minutes.")
+            upcoming = {}
+
         # Upcoming Events Section
         if upcoming:
             st.subheader("🔮 Upcoming Events")

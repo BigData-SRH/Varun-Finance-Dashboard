@@ -8,7 +8,7 @@ numpy>=1.24.0
 matplotlib
 
 # Data
-yfinance>=0.2.40
+yfinance>=0.2.64
 
 # Visualization
 plotly>=5.15.0
