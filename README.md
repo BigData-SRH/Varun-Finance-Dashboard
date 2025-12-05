@@ -58,7 +58,7 @@ The dashboard will open at `http://localhost:8501`
 ### Using Docker Compose (Recommended)
 
 ```bash
-# Build and run
+# Build and runnn
 docker-compose up --build
 
 # Run in detached mode
