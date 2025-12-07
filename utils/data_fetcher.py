@@ -1,7 +1,7 @@
 """
 Data fetching functions for Indian Market Analysis.
-All functions use Streamlit caching + persistent disk caching for performance.
-Includes rate limiting and retry logic to handle Yahoo Finance API limits.
+Uses pre-downloaded CSV files to minimize API calls.
+Falls back to yfinance API only for missing/fresh data.
 """
 
 from __future__ import annotations
@@ -15,27 +15,27 @@ import streamlit as st
 import warnings
 import time
 import random
-import pickle
-import hashlib
+import json
+from datetime import datetime
 
 from .config import INDICES, CONSTITUENTS, START_DATE, END_DATE
-import json
 
 warnings.filterwarnings('ignore')
 
 # =============================================================================
-# DISK CACHE CONFIGURATION
+# CSV DATA CONFIGURATION
 # =============================================================================
 
-CACHE_DIR = Path(".cache")
-CACHE_DIR.mkdir(exist_ok=True)
+DATA_DIR = Path("data")
+INDICES_DIR = DATA_DIR / "indices"
+STOCKS_DIR = DATA_DIR / "stocks"
+GLOBAL_DIR = DATA_DIR / "global"
+METADATA_FILE = DATA_DIR / "stocks_metadata.json"
+MANIFEST_FILE = DATA_DIR / "manifest.json"
 
-# Cache durations in hours (INCREASED for better performance)
-HISTORICAL_DATA_CACHE_HOURS = 24  # Historical price data (was 4)
-STOCK_INFO_CACHE_HOURS = 72       # Fundamental data (was 24)
-
-# Pre-populated metadata
-METADATA_FILE = Path("data/stocks_metadata.json")
+# Create directories if they don't exist
+for directory in [DATA_DIR, INDICES_DIR, STOCKS_DIR, GLOBAL_DIR]:
+    directory.mkdir(exist_ok=True)
 
 
 def load_stock_metadata() -> Dict[str, Dict[str, str]]:
@@ -49,38 +49,52 @@ def load_stock_metadata() -> Dict[str, Dict[str, str]]:
     return {}
 
 
-def get_cache_key(*args) -> str:
-    """Generate a unique cache key from arguments."""
-    key_str = "_".join(str(arg) for arg in args)
-    return hashlib.md5(key_str.encode()).hexdigest()[:16]
-
-
-def get_cached_data(cache_key: str, max_age_hours: int = 4) -> Optional[Any]:
-    """Load data from disk cache if fresh."""
-    cache_file = CACHE_DIR / f"{cache_key}.pkl"
-    if cache_file.exists():
+def load_manifest() -> Dict[str, Any]:
+    """Load manifest file with last update info."""
+    if MANIFEST_FILE.exists():
         try:
-            age_seconds = time.time() - cache_file.stat().st_mtime
-            if age_seconds < max_age_hours * 3600:
-                with open(cache_file, 'rb') as f:
-                    return pickle.load(f)
+            with open(MANIFEST_FILE, 'r') as f:
+                return json.load(f)
         except Exception:
-            pass  # Cache read failed, will refetch
-    return None
-
-
-def save_to_cache(cache_key: str, data: Any) -> None:
-    """Save data to disk cache."""
-    cache_file = CACHE_DIR / f"{cache_key}.pkl"
-    try:
-        with open(cache_file, 'wb') as f:
-            pickle.dump(data, f)
-    except Exception:
-        pass  # Cache write failed, continue without caching
+            pass
+    return {}
 
 
 # =============================================================================
-# RATE LIMITING & RETRY LOGIC
+# CSV DATA LOADERS
+# =============================================================================
+
+def load_csv_data(csv_path: Path) -> Optional[pd.DataFrame]:
+    """Load historical data from CSV file."""
+    if not csv_path.exists():
+        return None
+    
+    try:
+        data = pd.read_csv(csv_path, index_col=0, parse_dates=True)
+        
+        # Ensure required columns exist
+        if 'Close' not in data.columns:
+            return None
+        
+        # Calculate returns if not present
+        if 'Daily_Return' not in data.columns:
+            data['Daily_Return'] = data['Close'].pct_change()
+        if 'Cumulative_Return' not in data.columns:
+            data['Cumulative_Return'] = (1 + data['Daily_Return']).cumprod() - 1
+        
+        return data
+    except Exception as e:
+        print(f"Error loading CSV {csv_path}: {e}")
+        return None
+
+
+def ticker_to_filename(ticker: str) -> str:
+    """Convert ticker symbol to CSV filename."""
+    return ticker.replace("^", "").replace(".", "_") + ".csv"
+
+
+# =============================================================================
+# FALLBACK API FUNCTIONS (only when CSV not available)
 # =============================================================================
 
 def retry_on_rate_limit(max_retries: int = 3, base_delay: float = 5.0):
@@ -108,94 +122,149 @@ def retry_on_rate_limit(max_retries: int = 3, base_delay: float = 5.0):
     return decorator
 
 
-def rate_limited_sleep(min_delay: float = 0.3, max_delay: float = 0.8) -> None:
-    """Add a random delay to avoid rate limiting."""
-    time.sleep(random.uniform(min_delay, max_delay))
-
-
-# =============================================================================
-# BATCH DOWNLOAD FUNCTIONS
-# =============================================================================
-
-@retry_on_rate_limit(max_retries=3, base_delay=5.0)
-def batch_download_historical(
-    tickers: List[str],
-    start_date: str,
-    end_date: str
-) -> Dict[str, pd.DataFrame]:
-    """
-    Download historical data for multiple tickers in a single API call.
-
-    This is MUCH more efficient than individual downloads.
-    """
-    if not tickers:
-        return {}
-
-    # Check disk cache first
-    cache_key = get_cache_key("batch_hist", "_".join(sorted(tickers)), start_date, end_date)
-    cached = get_cached_data(cache_key, HISTORICAL_DATA_CACHE_HOURS)
-    if cached is not None:
-        return cached
-
+@retry_on_rate_limit(max_retries=2, base_delay=3.0)
+def fetch_from_yfinance(ticker: str, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
+    """Fallback function to fetch from yfinance API when CSV not available."""
     try:
-        # Single API call for all tickers
-        raw_data = yf.download(
-            tickers,
+        data = yf.download(
+            ticker,
             start=start_date,
             end=end_date,
             progress=False,
-            group_by='ticker',
-            threads=True,
             auto_adjust=False
         )
-
-        if raw_data is None or len(raw_data) == 0:
-            return {}
-
-        result: Dict[str, pd.DataFrame] = {}
-
-        # Handle single ticker case (no MultiIndex)
-        if len(tickers) == 1:
-            ticker = tickers[0]
-            data = raw_data.copy()
-            if isinstance(data.columns, pd.MultiIndex):
-                data.columns = data.columns.get_level_values(0)
-            data['Daily_Return'] = data['Close'].pct_change()
-            data['Cumulative_Return'] = (1 + data['Daily_Return']).cumprod() - 1
-            result[ticker] = data
-        else:
-            # Multiple tickers - data is grouped by ticker
-            for ticker in tickers:
-                try:
-                    if ticker in raw_data.columns.get_level_values(0):
-                        data = raw_data[ticker].copy()
-                        data = data.dropna(how='all')
-                        if len(data) > 0:
-                            data['Daily_Return'] = data['Close'].pct_change()
-                            data['Cumulative_Return'] = (1 + data['Daily_Return']).cumprod() - 1
-                            result[ticker] = data
-                except Exception:
-                    continue
-
-        # Save to disk cache
-        if result:
-            save_to_cache(cache_key, result)
-
-        return result
-
+        
+        if data is None or len(data) == 0:
+            return None
+        
+        # Flatten MultiIndex columns if present
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.get_level_values(0)
+        
+        # Calculate returns
+        data['Daily_Return'] = data['Close'].pct_change()
+        data['Cumulative_Return'] = (1 + data['Daily_Return']).cumprod() - 1
+        
+        return data
     except Exception as e:
-        error_str = str(e).lower()
-        if "429" in str(e) or "rate limit" in error_str:
-            raise  # Let retry decorator handle it
-        print(f"Error in batch download: {e}")
-        return {}
+        print(f"Error fetching {ticker} from API: {e}")
+        return None
 
 
 # =============================================================================
-# INDIVIDUAL FETCH FUNCTIONS (with caching)
+# MAIN DATA LOADING FUNCTIONS
 # =============================================================================
 
-@st.cache_data(ttl=14400, show_spinner=False)  # 4 hours (was 1 hour)
+@st.cache_data(ttl=3600, show_spinner="Loading index data...")
+def load_all_index_data() -> Dict[str, pd.DataFrame]:
+    """
+    Load data for all Indian indices.
+    PRIMARY: Uses CSV files from data/indices/
+    FALLBACK: Uses yfinance API if CSV not available
+    """
+    index_data: Dict[str, pd.DataFrame] = {}
+    
+    for name, ticker in INDICES.items():
+        # Try loading from CSV first
+        csv_filename = ticker_to_filename(ticker)
+        csv_path = INDICES_DIR / csv_filename
+        
+        data = load_csv_data(csv_path)
+        
+        # Fallback to API if CSV not available
+        if data is None:
+            st.warning(f"CSV not found for {name}, fetching from API...")
+            data = fetch_from_yfinance(ticker, START_DATE, END_DATE)
+        
+        if data is not None and not data.empty:
+            index_data[name] = data
+    
+    return index_data
+
+
+@st.cache_data(ttl=14400, show_spinner="Loading global indices...")
+def load_global_index_data() -> Dict[str, pd.DataFrame]:
+    """
+    Load data for global indices.
+    PRIMARY: Uses CSV files from data/global/
+    FALLBACK: Uses yfinance API if CSV not available
+    """
+    from .config import GLOBAL_INDICES
+    
+    global_data: Dict[str, pd.DataFrame] = {}
+    
+    for name, ticker in GLOBAL_INDICES.items():
+        # Try loading from CSV first
+        csv_filename = ticker_to_filename(ticker)
+        csv_path = GLOBAL_DIR / csv_filename
+        
+        data = load_csv_data(csv_path)
+        
+        # Fallback to API if CSV not available (but don't warn - global is optional)
+        if data is None:
+            data = fetch_from_yfinance(ticker, START_DATE, END_DATE)
+        
+        if data is not None and not data.empty:
+            global_data[name] = data
+    
+    return global_data
+
+
+@st.cache_data(ttl=14400, show_spinner="Loading stock data...")
+def load_all_stock_data() -> Tuple[Dict[str, pd.DataFrame], Dict[str, Dict[str, Any]]]:
+    """
+    Load historical price data and metadata for all stocks.
+    
+    PRIMARY: Uses CSV files from data/stocks/ + metadata JSON
+    FALLBACK: Uses yfinance API only for missing stocks
+    
+    Returns:
+        Tuple of (stock_data dict, stock_info dict with metadata)
+    """
+    all_stocks = sorted(list(set(sum(CONSTITUENTS.values(), []))))
+    
+    stock_data: Dict[str, pd.DataFrame] = {}
+    missing_count = 0
+    
+    # Load historical data from CSV
+    for ticker in all_stocks:
+        csv_filename = ticker_to_filename(ticker)
+        csv_path = STOCKS_DIR / csv_filename
+        
+        data = load_csv_data(csv_path)
+        
+        if data is not None and not data.empty:
+            stock_data[ticker] = data
+        else:
+            missing_count += 1
+    
+    # Show warning if many stocks are missing
+    if missing_count > 0:
+        st.warning(f"⚠️ {missing_count} stocks missing from CSV data. Run `python download_data.py` to update.")
+    
+    # Load metadata (NO API calls)
+    metadata = load_stock_metadata()
+    stock_info: Dict[str, Dict[str, Any]] = {}
+    
+    for ticker in all_stocks:
+        if ticker in metadata:
+            stock_info[ticker] = metadata[ticker]
+        else:
+            # Minimal fallback info
+            stock_info[ticker] = {
+                'name': ticker.replace('.NS', ''),
+                'sector': 'N/A',
+                'industry': 'N/A'
+            }
+    
+    return stock_data, stock_info
+
+
+# =============================================================================
+# INDIVIDUAL FETCH FUNCTIONS (mostly for backwards compatibility)
+# =============================================================================
+
+@st.cache_data(ttl=14400, show_spinner=False)
 def fetch_index_data(
     ticker: str,
     start_date: str = START_DATE,
@@ -203,246 +272,138 @@ def fetch_index_data(
 ) -> Optional[pd.DataFrame]:
     """
     Fetch historical data for an index.
-    Uses disk cache + Streamlit cache for optimal performance.
+    PRIMARY: Uses CSV files
+    FALLBACK: Uses yfinance API
     """
-    # Check disk cache first
-    cache_key = get_cache_key("index", ticker, start_date, end_date)
-    cached = get_cached_data(cache_key, HISTORICAL_DATA_CACHE_HOURS)
-    if cached is not None:
-        return cached
-
-    try:
-        data = _fetch_single_ticker(ticker, start_date, end_date)
-        if data is not None:
-            save_to_cache(cache_key, data)
-        return data
-    except Exception as e:
-        print(f"Error fetching {ticker}: {e}")
-        return None
-
-
-@retry_on_rate_limit(max_retries=3, base_delay=5.0)
-def _fetch_single_ticker(
-    ticker: str,
-    start_date: str,
-    end_date: str
-) -> Optional[pd.DataFrame]:
-    """Internal function to fetch a single ticker with retry logic."""
-    data: Optional[pd.DataFrame] = yf.download(
-        ticker,
-        start=start_date,
-        end=end_date,
-        progress=False,
-        multi_level_index=False,
-        auto_adjust=False
-    )
-
-    if data is None or len(data) == 0:
-        return None
-
-    # Flatten MultiIndex columns if present
-    if isinstance(data.columns, pd.MultiIndex):
-        data.columns = data.columns.get_level_values(0)
-
-    # Calculate returns
-    data['Daily_Return'] = data['Close'].pct_change()
-    data['Cumulative_Return'] = (1 + data['Daily_Return']).cumprod() - 1
-
+    # Try CSV first
+    csv_filename = ticker_to_filename(ticker)
+    csv_path = INDICES_DIR / csv_filename
+    data = load_csv_data(csv_path)
+    
+    # Fallback to API
+    if data is None:
+        data = fetch_from_yfinance(ticker, start_date, end_date)
+    
     return data
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=14400, show_spinner=False)
 def fetch_stock_data(
     ticker: str,
     start_date: str = START_DATE,
     end_date: str = END_DATE
 ) -> Optional[pd.DataFrame]:
-    """Fetch historical data for a stock."""
-    return fetch_index_data(ticker, start_date, end_date)
+    """
+    Fetch historical data for a stock.
+    PRIMARY: Uses CSV files
+    FALLBACK: Uses yfinance API
+    """
+    # Try CSV first
+    csv_filename = ticker_to_filename(ticker)
+    csv_path = STOCKS_DIR / csv_filename
+    data = load_csv_data(csv_path)
+    
+    # Fallback to API
+    if data is None:
+        data = fetch_from_yfinance(ticker, start_date, end_date)
+    
+    return data
 
 
-@st.cache_data(ttl=86400, show_spinner=False)  # 24h cache for fundamental data
+@st.cache_data(ttl=86400, show_spinner=False)
 def fetch_stock_info(ticker: str) -> Dict[str, Any]:
     """
     Fetch fundamental data for a stock.
-    Uses longer cache duration since fundamentals change less frequently.
+    Uses ONLY metadata JSON (NO API calls unless explicitly needed).
     """
-    # Check disk cache first (24h)
-    cache_key = get_cache_key("info", ticker)
-    cached = get_cached_data(cache_key, STOCK_INFO_CACHE_HOURS)
-    if cached is not None:
-        return cached
-
-    try:
-        result = _fetch_stock_info_internal(ticker)
-        if result and 'name' in result:
-            save_to_cache(cache_key, result)
-        return result
-    except Exception:
-        return {'ticker': ticker, 'name': ticker.replace('.NS', '')}
-
-
-@retry_on_rate_limit(max_retries=2, base_delay=3.0)
-def _fetch_stock_info_internal(ticker: str) -> Dict[str, Any]:
-    """Internal function to fetch stock info with retry logic."""
-    stock = yf.Ticker(ticker)
-    info: Dict[str, Any] = stock.info
-
+    # Load from metadata first
+    metadata = load_stock_metadata()
+    if ticker in metadata:
+        return {
+            'ticker': ticker,
+            'name': metadata[ticker].get('name', ticker.replace('.NS', '')),
+            'sector': metadata[ticker].get('sector', 'N/A'),
+            'industry': metadata[ticker].get('industry', 'N/A'),
+            # These would require API call - return NaN for now
+            'market_cap': np.nan,
+            'pe_ratio': np.nan,
+            'forward_pe': np.nan,
+            'pb_ratio': np.nan,
+            'dividend_yield': np.nan,
+            'roe': np.nan,
+            'roa': np.nan,
+            'debt_to_equity': np.nan,
+            'current_price': np.nan,
+            'fifty_two_week_high': np.nan,
+            'fifty_two_week_low': np.nan,
+            'avg_volume': np.nan,
+            'beta': np.nan,
+            'target_mean_price': np.nan,
+            'recommendation': 'N/A',
+            'num_analysts': np.nan,
+        }
+    
+    # Minimal fallback
     return {
         'ticker': ticker,
-        'name': info.get('longName', info.get('shortName', ticker.replace('.NS', ''))),
-        'sector': info.get('sector', 'N/A'),
-        'industry': info.get('industry', 'N/A'),
-        'market_cap': info.get('marketCap', np.nan),
-        'pe_ratio': info.get('trailingPE', np.nan),
-        'forward_pe': info.get('forwardPE', np.nan),
-        'pb_ratio': info.get('priceToBook', np.nan),
-        'dividend_yield': info.get('dividendYield', np.nan),
-        'roe': info.get('returnOnEquity', np.nan),
-        'roa': info.get('returnOnAssets', np.nan),
-        'debt_to_equity': info.get('debtToEquity', np.nan),
-        'current_price': info.get('currentPrice', info.get('regularMarketPrice', np.nan)),
-        'fifty_two_week_high': info.get('fiftyTwoWeekHigh', np.nan),
-        'fifty_two_week_low': info.get('fiftyTwoWeekLow', np.nan),
-        'avg_volume': info.get('averageVolume', np.nan),
-        'beta': info.get('beta', np.nan),
-        'target_mean_price': info.get('targetMeanPrice', np.nan),
-        'recommendation': info.get('recommendationKey', 'N/A'),
-        'num_analysts': info.get('numberOfAnalystOpinions', np.nan),
+        'name': ticker.replace('.NS', ''),
+        'sector': 'N/A',
+        'industry': 'N/A'
     }
 
 
-# =============================================================================
-# BATCH LOAD FUNCTIONS
-# =============================================================================
-
-@st.cache_data(ttl=3600, show_spinner="Loading index data...")
-def load_all_index_data() -> Dict[str, pd.DataFrame]:
-    """Load data for all indices using batch download."""
-    # Check disk cache first
-    cache_key = get_cache_key("all_indices", START_DATE, END_DATE)
-    cached = get_cached_data(cache_key, HISTORICAL_DATA_CACHE_HOURS)
-    if cached is not None:
-        return cached
-
-    tickers = list(INDICES.values())
-    ticker_to_name = {v: k for k, v in INDICES.items()}
-
-    # Batch download all indices at once
-    raw_data = batch_download_historical(tickers, START_DATE, END_DATE)
-
-    # Map ticker symbols to index names
-    index_data: Dict[str, pd.DataFrame] = {}
-    for ticker, data in raw_data.items():
-        name = ticker_to_name.get(ticker, ticker)
-        index_data[name] = data
-
-    if index_data:
-        save_to_cache(cache_key, index_data)
-
-    return index_data
-
-
-@st.cache_data(ttl=14400, show_spinner="Loading global indices...")  # 4 hours
-def load_global_index_data() -> Dict[str, pd.DataFrame]:
-    """Load data for global indices using batch download."""
-    from .config import GLOBAL_INDICES
-
-    # Check disk cache first
-    cache_key = get_cache_key("global_indices", START_DATE, END_DATE)
-    cached = get_cached_data(cache_key, HISTORICAL_DATA_CACHE_HOURS)
-    if cached is not None:
-        return cached
-
-    tickers = list(GLOBAL_INDICES.values())
-    ticker_to_name = {v: k for k, v in GLOBAL_INDICES.items()}
-
-    # Batch download all global indices at once
-    raw_data = batch_download_historical(tickers, START_DATE, END_DATE)
-
-    # Map ticker symbols to index names
-    global_data: Dict[str, pd.DataFrame] = {}
-    for ticker, data in raw_data.items():
-        name = ticker_to_name.get(ticker, ticker)
-        global_data[name] = data
-
-    if global_data:
-        save_to_cache(cache_key, global_data)
-
-    return global_data
-
-
-@st.cache_data(ttl=14400, show_spinner="Loading stock data...")  # 4 hours
-def load_all_stock_data() -> Tuple[Dict[str, pd.DataFrame], Dict[str, Dict[str, Any]]]:
-    """
-    Load ONLY historical price data for all stocks.
-    Stock info is loaded lazily when needed.
-
-    Returns:
-        Tuple of (stock_data dict, stock_info dict with metadata)
-    """
-    all_stocks = sorted(list(set(sum(CONSTITUENTS.values(), []))))
-
-    # Check disk cache first for historical data only
-    cache_key = get_cache_key("all_stocks_historical", START_DATE, END_DATE)
-    cached = get_cached_data(cache_key, HISTORICAL_DATA_CACHE_HOURS)
-    if cached is not None:
-        stock_data, _ = cached
-        # Load metadata for all stocks
-        metadata = load_stock_metadata()
-        stock_info = {ticker: metadata.get(ticker, {'name': ticker.replace('.NS', ''), 'sector': 'N/A', 'industry': 'N/A'}) for ticker in all_stocks}
-        return stock_data, stock_info
-
-    # BATCH DOWNLOAD: All historical data in ONE API call
-    with st.spinner("Downloading historical data..."):
-        stock_data = batch_download_historical(all_stocks, START_DATE, END_DATE)
-
-    # Use pre-populated metadata (NO API calls for fundamentals)
-    metadata = load_stock_metadata()
-    stock_info: Dict[str, Dict[str, Any]] = {}
-    for ticker in all_stocks:
-        if ticker in metadata:
-            stock_info[ticker] = metadata[ticker]
-        else:
-            stock_info[ticker] = {'name': ticker.replace('.NS', ''), 'sector': 'N/A', 'industry': 'N/A'}
-
-    # Save to disk cache
-    result = (stock_data, stock_info)
-    save_to_cache(cache_key, result)
-
-    return result
-
-
-@st.cache_data(ttl=86400, show_spinner=False)  # 24 hours - dynamic data changes less
+@st.cache_data(ttl=86400, show_spinner=False)
 def fetch_stock_info_lazy(ticker: str) -> Dict[str, Any]:
     """
-    Fetch dynamic stock info (PE, PB, Market Cap, Dividend) for a specific ticker.
-    This is called ONLY when user selects a stock.
-    
-    Combines metadata with live data from yfinance.
+    Fetch stock info lazily when selected.
+    For Stock Explorer page - combines metadata with live API data.
     """
-    # Start with metadata
-    metadata = load_stock_metadata()
-    info = metadata.get(ticker, {'name': ticker.replace('.NS', ''), 'sector': 'N/A', 'industry': 'N/A'})
-    
-    # Check session state cache first
+    # Check session state first
     cache_key = f"stock_info_{ticker}"
     if cache_key in st.session_state:
         return st.session_state[cache_key]
     
-    # Fetch dynamic data from yfinance
+    # Start with metadata
+    metadata = load_stock_metadata()
+    info = {
+        'ticker': ticker,
+        'name': metadata.get(ticker, {}).get('name', ticker.replace('.NS', '')),
+        'sector': metadata.get(ticker, {}).get('sector', 'N/A'),
+        'industry': metadata.get(ticker, {}).get('industry', 'N/A'),
+    }
+    
+    # Try to fetch live data (PE, PB, Market Cap, etc.) from API
     try:
-        dynamic_info = fetch_stock_info(ticker)
-        if dynamic_info:
-            # Merge metadata with dynamic data
-            info.update({
-                'pe_ratio': dynamic_info.get('pe_ratio'),
-                'pb_ratio': dynamic_info.get('pb_ratio'),
-                'market_cap': dynamic_info.get('market_cap'),
-                'dividend_yield': dynamic_info.get('dividend_yield')
-            })
-    except Exception:
-        pass
+        stock = yf.Ticker(ticker)
+        stock_info = stock.info
+        
+        info.update({
+            'market_cap': stock_info.get('marketCap', np.nan),
+            'pe_ratio': stock_info.get('trailingPE', np.nan),
+            'forward_pe': stock_info.get('forwardPE', np.nan),
+            'pb_ratio': stock_info.get('priceToBook', np.nan),
+            'dividend_yield': stock_info.get('dividendYield', np.nan),
+            'roe': stock_info.get('returnOnEquity', np.nan),
+            'roa': stock_info.get('returnOnAssets', np.nan),
+            'debt_to_equity': stock_info.get('debtToEquity', np.nan),
+            'current_price': stock_info.get('currentPrice', stock_info.get('regularMarketPrice', np.nan)),
+            'fifty_two_week_high': stock_info.get('fiftyTwoWeekHigh', np.nan),
+            'fifty_two_week_low': stock_info.get('fiftyTwoWeekLow', np.nan),
+            'avg_volume': stock_info.get('averageVolume', np.nan),
+            'beta': stock_info.get('beta', np.nan),
+            'target_mean_price': stock_info.get('targetMeanPrice', np.nan),
+            'recommendation': stock_info.get('recommendationKey', 'N/A'),
+            'num_analysts': stock_info.get('numberOfAnalystOpinions', np.nan),
+        })
+    except Exception as e:
+        print(f"Could not fetch live data for {ticker}: {e}")
+        # Fill with NaN
+        info.update({
+            'market_cap': np.nan,
+            'pe_ratio': np.nan,
+            'pb_ratio': np.nan,
+            'dividend_yield': np.nan
+        })
     
     # Cache in session state
     st.session_state[cache_key] = info
@@ -466,10 +427,19 @@ def get_stock_index(ticker: str) -> Optional[str]:
     return None
 
 
-def clear_disk_cache() -> None:
-    """Clear all cached data from disk."""
-    for cache_file in CACHE_DIR.glob("*.pkl"):
-        try:
-            cache_file.unlink()
-        except Exception:
-            pass
+def get_data_status() -> Dict[str, Any]:
+    """Get status of CSV data availability."""
+    manifest = load_manifest()
+    
+    status = {
+        'manifest_exists': MANIFEST_FILE.exists(),
+        'last_updated': manifest.get('last_updated', 'Unknown'),
+        'indices_available': len(list(INDICES_DIR.glob("*.csv"))),
+        'stocks_available': len(list(STOCKS_DIR.glob("*.csv"))),
+        'global_available': len(list(GLOBAL_DIR.glob("*.csv"))),
+        'indices_expected': len(INDICES),
+        'stocks_expected': len(get_unique_stocks()),
+        'metadata_exists': METADATA_FILE.exists()
+    }
+    
+    return status
