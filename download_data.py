@@ -135,13 +135,101 @@ def download_stocks():
 
 def download_stock_info():
     """
-    Download stock fundamental info (name, sector, industry).
-    This is saved to stocks_metadata.json (already exists).
+    Download stock fundamental info including PE Ratio, Dividend Yield, Market Cap, etc.
+    Updates stocks_metadata.json with both static and dynamic fundamental data.
     """
-    print("\n📋 Stock Fundamental Info...")
+    import json
+    
+    print("\n📋 Downloading Stock Fundamental Data...")
     print("=" * 60)
-    print("  ℹ️ Using existing data/stocks_metadata.json")
-    print("  ℹ️ To update metadata, modify the JSON file directly")
+    
+    # Load existing metadata
+    metadata_file = DATA_DIR / "stocks_metadata.json"
+    if metadata_file.exists():
+        with open(metadata_file, 'r') as f:
+            metadata = json.load(f)
+        print(f"  ℹ️ Loaded existing metadata for {len(metadata)} stocks")
+    else:
+        metadata = {}
+        print("  ℹ️ Creating new metadata file")
+    
+    # Get all stocks to update
+    all_stocks = set()
+    for stocks in CONSTITUENTS.values():
+        all_stocks.update(stocks)
+    
+    all_stocks = sorted(list(all_stocks))
+    total = len(all_stocks)
+    
+    print(f"  Updating fundamental data for {total} stocks...")
+    print()
+    
+    success_count = 0
+    failed_stocks = []
+    
+    for i, ticker in enumerate(all_stocks, 1):
+        print(f"  [{i}/{total}] Fetching {ticker}...", end=" ")
+        
+        try:
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            
+            # Extract fundamental data with fallbacks
+            updated_data = {
+                "name": info.get("longName") or info.get("shortName") or ticker,
+                "sector": info.get("sector", "Unknown"),
+                "industry": info.get("industry", "Unknown"),
+                "pe_ratio": info.get("trailingPE") or info.get("forwardPE"),
+                "dividend_yield": info.get("dividendYield"),  # Decimal (e.g., 0.0245 = 2.45%)
+                "market_cap": info.get("marketCap"),
+                "book_value": info.get("bookValue"),
+                "52_week_high": info.get("fiftyTwoWeekHigh"),
+                "52_week_low": info.get("fiftyTwoWeekLow"),
+                "current_price": info.get("currentPrice") or info.get("regularMarketPrice"),
+                "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            
+            # Merge with existing data (preserve any custom fields)
+            if ticker in metadata:
+                metadata[ticker].update(updated_data)
+            else:
+                metadata[ticker] = updated_data
+            
+            print("✅")
+            success_count += 1
+            
+        except Exception as e:
+            print(f"❌ {str(e)[:50]}")
+            failed_stocks.append(ticker)
+            
+            # If stock doesn't exist in metadata, create minimal entry
+            if ticker not in metadata:
+                metadata[ticker] = {
+                    "name": ticker,
+                    "sector": "Unknown",
+                    "industry": "Unknown",
+                    "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+        
+        # Rate limiting
+        if i % 10 == 0:
+            delay = random.uniform(2, 4)
+            print(f"    ⏸️ Pausing {delay:.1f}s...")
+            time.sleep(delay)
+        else:
+            time.sleep(random.uniform(0.5, 1.0))
+    
+    # Save updated metadata
+    with open(metadata_file, 'w') as f:
+        json.dump(metadata, f, indent=2, ensure_ascii=False)
+    
+    print()
+    print(f"  ✅ Updated metadata for {success_count}/{total} stocks")
+    if failed_stocks:
+        print(f"  ⚠️ Failed: {', '.join(failed_stocks[:10])}")
+        if len(failed_stocks) > 10:
+            print(f"      ... and {len(failed_stocks) - 10} more")
+    print(f"  💾 Saved to {metadata_file}")
 
 
 def create_manifest():
