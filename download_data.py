@@ -34,7 +34,7 @@ GLOBAL_DIR.mkdir(exist_ok=True)
 
 
 def safe_download(ticker, start_date, end_date, retry_count=3):
-    """Download with retry logic."""
+    """Download with retry logic and clean the data."""
     for attempt in range(retry_count):
         try:
             data = yf.download(
@@ -45,6 +45,9 @@ def safe_download(ticker, start_date, end_date, retry_count=3):
                 auto_adjust=False
             )
             if data is not None and not data.empty:
+                # Flatten multi-index columns if present
+                if isinstance(data.columns, pd.MultiIndex):
+                    data.columns = data.columns.get_level_values(0)
                 return data
         except Exception as e:
             print(f"  ⚠️ Attempt {attempt + 1} failed for {ticker}: {e}")

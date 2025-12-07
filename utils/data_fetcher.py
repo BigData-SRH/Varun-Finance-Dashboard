@@ -7,7 +7,7 @@ Falls back to yfinance API only for missing/fresh data.
 from __future__ import annotations
 from typing import Optional, Dict, Tuple, List, Any
 from functools import wraps
-from pathlib import Path
+import os
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -23,26 +23,34 @@ from .config import INDICES, CONSTITUENTS, START_DATE, END_DATE
 warnings.filterwarnings('ignore')
 
 # =============================================================================
-# CSV DATA CONFIGURATION
+# CSV DATA CONFIGURATION - Using os.path to avoid Path serialization issues
 # =============================================================================
 
-DATA_DIR = Path("data")
-INDICES_DIR = DATA_DIR / "indices"
-STOCKS_DIR = DATA_DIR / "stocks"
-GLOBAL_DIR = DATA_DIR / "global"
-METADATA_FILE = DATA_DIR / "stocks_metadata.json"
-MANIFEST_FILE = DATA_DIR / "manifest.json"
+def _get_base_dir() -> str:
+    """Get the base directory (project root) using os.path."""
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Create directories if they don't exist
-for directory in [DATA_DIR, INDICES_DIR, STOCKS_DIR, GLOBAL_DIR]:
-    directory.mkdir(exist_ok=True)
+def _get_data_dir() -> str:
+    """Get the data directory path."""
+    return os.path.join(_get_base_dir(), "data")
+
+def _ensure_directories():
+    """Create data directories if they don't exist."""
+    data_dir = _get_data_dir()
+    for subdir in ["indices", "stocks", "global"]:
+        path = os.path.join(data_dir, subdir)
+        os.makedirs(path, exist_ok=True)
+
+# Create directories at module load time
+_ensure_directories()
 
 
 def load_stock_metadata() -> Dict[str, Dict[str, str]]:
     """Load pre-populated stock metadata from JSON file."""
-    if METADATA_FILE.exists():
+    metadata_file = os.path.join(_get_data_dir(), "stocks_metadata.json")
+    if os.path.exists(metadata_file):
         try:
-            with open(METADATA_FILE, 'r') as f:
+            with open(metadata_file, 'r') as f:
                 return json.load(f)
         except Exception:
             pass
@@ -51,9 +59,10 @@ def load_stock_metadata() -> Dict[str, Dict[str, str]]:
 
 def load_manifest() -> Dict[str, Any]:
     """Load manifest file with last update info."""
-    if MANIFEST_FILE.exists():
+    manifest_file = os.path.join(_get_data_dir(), "manifest.json")
+    if os.path.exists(manifest_file):
         try:
-            with open(MANIFEST_FILE, 'r') as f:
+            with open(manifest_file, 'r') as f:
                 return json.load(f)
         except Exception:
             pass
@@ -64,16 +73,39 @@ def load_manifest() -> Dict[str, Any]:
 # CSV DATA LOADERS
 # =============================================================================
 
-def load_csv_data(csv_path: Path) -> Optional[pd.DataFrame]:
-    """Load historical data from CSV file."""
-    if not csv_path.exists():
+def load_csv_data(csv_path: str) -> Optional[pd.DataFrame]:
+    """
+    Load historical data from a CSV file.
+    Handles malformed yfinance multi-index exports.
+    csv_path: string path to CSV file
+    """
+    if not os.path.exists(csv_path):
         return None
     
     try:
-        data = pd.read_csv(csv_path, index_col=0, parse_dates=True)
+        # Read CSV
+        data = pd.read_csv(csv_path, index_col=0)
         
-        # Ensure required columns exist
-        if 'Close' not in data.columns:
+        # Check if first row contains ticker symbols (malformed yfinance export)
+        if len(data) > 0:
+            first_row = data.iloc[0]
+            # If first row has string values like '^NSEI', skip it
+            if any(isinstance(val, str) and (val.startswith('^') or '.NS' in str(val) or '.BO' in str(val)) for val in first_row.values):
+                data = data.iloc[1:]  # Skip the ticker row
+        
+        # Convert index to datetime
+        data.index = pd.to_datetime(data.index, errors='coerce')
+        # Drop rows with invalid dates
+        data = data[data.index.notna()]
+        
+        # Convert all columns to numeric (handles string values from malformed CSV)
+        for col in data.columns:
+            data[col] = pd.to_numeric(data[col], errors='coerce')
+        
+        # Drop rows with NaN in Close column
+        if 'Close' in data.columns:
+            data = data.dropna(subset=['Close'])
+        else:
             return None
         
         # Calculate returns if not present
@@ -82,7 +114,7 @@ def load_csv_data(csv_path: Path) -> Optional[pd.DataFrame]:
         if 'Cumulative_Return' not in data.columns:
             data['Cumulative_Return'] = (1 + data['Daily_Return']).cumprod() - 1
         
-        return data
+        return data if len(data) > 0 else None
     except Exception as e:
         print(f"Error loading CSV {csv_path}: {e}")
         return None
@@ -164,16 +196,25 @@ def load_all_index_data() -> Dict[str, pd.DataFrame]:
     """
     index_data: Dict[str, pd.DataFrame] = {}
     
+    # Use os.path to construct paths
+    indices_dir = os.path.join(_get_data_dir(), "indices")
+    
     for name, ticker in INDICES.items():
         # Try loading from CSV first
         csv_filename = ticker_to_filename(ticker)
-        csv_path = INDICES_DIR / csv_filename
+        csv_path = os.path.join(indices_dir, csv_filename)
+        
+        # Debug: Check if file exists
+        if not os.path.exists(csv_path):
+            print(f"DEBUG: CSV not found at {csv_path}")
+            st.warning(f"CSV not found for {name} at {csv_path}, fetching from API...")
         
         data = load_csv_data(csv_path)
         
         # Fallback to API if CSV not available
         if data is None:
-            st.warning(f"CSV not found for {name}, fetching from API...")
+            if os.path.exists(csv_path):
+                st.warning(f"CSV exists but failed to load for {name}, trying API...")
             data = fetch_from_yfinance(ticker, START_DATE, END_DATE)
         
         if data is not None and not data.empty:
@@ -193,10 +234,13 @@ def load_global_index_data() -> Dict[str, pd.DataFrame]:
     
     global_data: Dict[str, pd.DataFrame] = {}
     
+    # Use os.path to construct paths
+    global_dir = os.path.join(_get_data_dir(), "global")
+    
     for name, ticker in GLOBAL_INDICES.items():
         # Try loading from CSV first
         csv_filename = ticker_to_filename(ticker)
-        csv_path = GLOBAL_DIR / csv_filename
+        csv_path = os.path.join(global_dir, csv_filename)
         
         data = load_csv_data(csv_path)
         
@@ -226,10 +270,13 @@ def load_all_stock_data() -> Tuple[Dict[str, pd.DataFrame], Dict[str, Dict[str, 
     stock_data: Dict[str, pd.DataFrame] = {}
     missing_count = 0
     
+    # Use os.path to construct paths
+    stocks_dir = os.path.join(_get_data_dir(), "stocks")
+    
     # Load historical data from CSV
     for ticker in all_stocks:
         csv_filename = ticker_to_filename(ticker)
-        csv_path = STOCKS_DIR / csv_filename
+        csv_path = os.path.join(stocks_dir, csv_filename)
         
         data = load_csv_data(csv_path)
         
@@ -276,8 +323,9 @@ def fetch_index_data(
     FALLBACK: Uses yfinance API
     """
     # Try CSV first
+    indices_dir = os.path.join(_get_data_dir(), "indices")
     csv_filename = ticker_to_filename(ticker)
-    csv_path = INDICES_DIR / csv_filename
+    csv_path = os.path.join(indices_dir, csv_filename)
     data = load_csv_data(csv_path)
     
     # Fallback to API
@@ -299,8 +347,9 @@ def fetch_stock_data(
     FALLBACK: Uses yfinance API
     """
     # Try CSV first
+    stocks_dir = os.path.join(_get_data_dir(), "stocks")
     csv_filename = ticker_to_filename(ticker)
-    csv_path = STOCKS_DIR / csv_filename
+    csv_path = os.path.join(stocks_dir, csv_filename)
     data = load_csv_data(csv_path)
     
     # Fallback to API

@@ -525,7 +525,7 @@ def main():
                 }
 
                 comparison_df = pd.DataFrame(comparison_data)
-                st.dataframe(comparison_df, hide_index=True, use_container_width=True)
+                st.dataframe(comparison_df, hide_index=True, width='stretch')
 
                 # Overlaid performance chart
                 st.markdown("##### Performance Overlay")
@@ -537,7 +537,7 @@ def main():
                     comparison_data_dict,
                     f"{index1} vs {index2}: Normalized Performance"
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.info("Select two different indices to compare.")
 
@@ -593,7 +593,7 @@ def main():
             template='plotly_white',
             height=500
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with tab2:
         fig = plot_single_cumulative_returns(
@@ -601,20 +601,20 @@ def main():
             selected_index,
             f"{selected_index} - Cumulative Returns (%)"
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with tab3:
         fig = plot_drawdown(data, selected_index)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with tab4:
         fig = plot_annual_returns(data, selected_index)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with tab5:
         window = st.slider("Rolling Window (days)", 30, 252, 90, key="vol_window")
         fig = plot_rolling_volatility(data, selected_index, window)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     st.markdown("---")
 
