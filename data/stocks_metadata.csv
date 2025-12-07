@@ -1,0 +1,61 @@
+ticker,name,sector,industry,pe_ratio,dividend_yield,market_cap,book_value,52_week_high,52_week_low,current_price,last_updated
+RELIANCE.NS,Reliance Industries Limited,Energy,Oil & Gas Refining & Marketing,25.062632,0.36,20848895328256,648.12,1581.3,1114.85,1540.6,2025-12-07 16:16:52
+TCS.NS,Tata Consultancy Services Limited,Technology,Information Technology Services,23.697037,1.91,11716090920960,294.119,4494.9,2866.6,3238.2,2025-12-07 16:17:04
+HDFCBANK.NS,HDFC Bank Limited,Financial Services,Banks - Regional,22.937813,1.1,15433234120704,354.079,1020.5,812.15,1003.3,2025-12-07 16:16:15
+INFY.NS,Infosys Limited,Technology,Information Technology Services,22.677143,2.78,6700010045440,2.807,2006.45,1307.0,1616.2,2025-12-07 16:16:29
+ICICIBANK.NS,ICICI Bank Limited,Financial Services,Banks - Regional,18.832836,0.79,9955419619328,469.65,1500.0,1186.0,1392.5,2025-12-07 16:16:22
+HINDUNILVR.NS,Hindustan Unilever Limited,Consumer Defensive,Household & Personal Products,50.509724,1.84,5494863298560,207.383,2750.0,2136.0,2338.6,2025-12-07 16:16:21
+BHARTIARTL.NS,Bharti Airtel Limited,Communication Services,Telecom Services,32.78607,0.76,12844869353472,203.273,2174.5,1559.5,2108.8,2025-12-07 16:15:57
+SBIN.NS,State Bank of India,Financial Services,Banks - Regional,10.811262,1.64,8967544635392,616.765,999.0,680.0,971.5,2025-12-07 16:16:55
+KOTAKBANK.NS,Kotak Mahindra Bank Limited,Financial Services,Banks - Regional,23.093987,0.12,4285563666432,845.015,2301.9,1723.75,2154.9,2025-12-07 16:16:33
+WIPRO.NS,Wipro Limited,Technology,Information Technology Services,20.242212,4.23,2722364915712,82.193,324.6,228.0,259.91,2025-12-07 16:17:11
+HCLTECH.NS,HCL Technologies Limited,Technology,Information Technology Services,26.88069,2.85,4559761571840,2.965,2012.2,1302.75,1683.0,2025-12-07 16:16:14
+TECHM.NS,Tech Mahindra Limited,Technology,Information Technology Services,31.055754,2.86,1390825701376,310.382,1807.7,1209.4,1570.8,2025-12-07 16:17:05
+LT.NS,Larsen & Toubro Limited,Industrials,Engineering & Construction,33.897423,0.84,5554870681600,736.989,4140.0,2965.3,4038.2,2025-12-07 16:16:34
+ITC.NS,ITC Limited,Consumer Defensive,Tobacco,25.120968,3.88,5073523441664,56.707,491.0,390.15,404.95,2025-12-07 16:16:30
+AXISBANK.NS,Axis Bank Limited,Financial Services,Banks - Regional,15.361121,0.08,4037159682048,643.264,1304.0,933.5,1282.5,2025-12-07 16:15:47
+TITAN.NS,Titan Company Limited,Consumer Cyclical,Luxury Goods,81.9712,0.29,3382569598976,144.377,3956.0,2925.0,3813.3,2025-12-07 16:17:07
+ULTRACEMCO.NS,UltraTech Cement Limited,Basic Materials,Building Materials,46.728184,0.67,3411077496832,2448.889,13097.0,10047.85,11597.0,2025-12-07 16:17:09
+SUNPHARMA.NS,Sun Pharmaceutical Industries Limited,Healthcare,Drug Manufacturers - Specialty & Generic,41.32067,0.89,4331519344640,324.462,1910.0,1548.0,1805.3,2025-12-07 16:16:59
+NESTLEIND.NS,Nestlé India Limited,Consumer Defensive,Packaged Foods,81.284225,1.6,2404415176704,22.996,1311.6,1055.0,1246.9,2025-12-07 16:16:44
+MARUTI.NS,Maruti Suzuki India Limited,Consumer Cyclical,Auto Manufacturers,34.602062,0.83,5119102418944,3172.502,16660.0,10725.0,16282.0,2025-12-07 16:16:39
+M&M.NS,Mahindra & Mahindra Limited,Consumer Cyclical,Auto Manufacturers,29.412092,0.68,4460692111360,741.994,3795.0,2425.0,3717.1,2025-12-07 16:16:38
+TATAMOTORS.NS,Tata Motors Passenger Vehicles Limited,Consumer Cyclical,Auto Manufacturers,6.662016,0.0148,1494474162176,315.493,842.75,376.3,405.85,2025-12-07 16:17:01
+BAJFINANCE.NS,Bajaj Finance Limited,Financial Services,Credit Services,35.58574,0.42,6513461035008,166.188,1102.5,679.2,1048.0,2025-12-07 16:15:51
+ASIANPAINT.NS,Asian Paints Limited,Basic Materials,Specialty Chemicals,72.98992,0.84,2845677191168,204.34,2985.7,2124.75,2968.5,2025-12-07 16:15:44
+NTPC.NS,NTPC Limited,Utilities,Utilities - Regulated Electric,17.29802,3.43,3134932123648,198.221,373.3,292.8,323.3,2025-12-07 16:16:46
+POWERGRID.NS,Power Grid Corporation of India Limited,Utilities,Utilities - Regulated Electric,17.451487,5.0,2509302923264,106.531,336.25,247.3,269.8,2025-12-07 16:16:51
+ONGC.NS,Oil and Natural Gas Corporation Limited,Energy,Oil & Gas Integrated,8.283997,7.57,3035374288896,292.589,273.5,205.0,241.23,2025-12-07 16:16:47
+COALINDIA.NS,Coal India Limited,Energy,Thermal Coal,7.5014806,6.97,2341528666112,171.077,420.95,349.25,379.95,2025-12-07 16:16:03
+ADANIPORTS.NS,Adani Ports and Special Economic Zone Limited,Industrials,Marine Shipping,27.250406,0.46,3260746039296,310.464,1549.0,1010.75,1509.4,2025-12-07 16:15:41
+JSWSTEEL.NS,JSW Steel Limited,Basic Materials,Steel,47.167206,0.24,2838728278016,340.317,1223.9,880.0,1162.2,2025-12-07 16:16:31
+TATASTEEL.NS,Tata Steel Limited,Basic Materials,Steel,30.662386,2.15,2084170498048,76.221,186.94,122.62,167.11,2025-12-07 16:17:02
+HINDALCO.NS,Hindalco Industries Limited,Basic Materials,Aluminum,10.308665,0.61,1840068820992,607.505,864.0,546.45,823.25,2025-12-07 16:16:20
+BAJAJFINSV.NS,Bajaj Finserv Ltd.,Financial Services,Financial Conglomerates,34.964977,0.05,3347365494784,480.6,2195.0,1551.65,2096.5,2025-12-07 16:15:49
+HDFCLIFE.NS,HDFC Life Insurance Company Limited,Financial Services,Insurance - Life,87.705475,0.27,1657853575168,78.523,820.75,584.3,768.3,2025-12-07 16:16:17
+SBILIFE.NS,SBI Life Insurance Company Limited,Financial Services,Insurance - Life,82.63373,0.13,2029734461440,182.376,2086.6,1372.55,2023.7,2025-12-07 16:16:53
+DIVISLAB.NS,Divi's Laboratories Limited,Healthcare,Drug Manufacturers - Specialty & Generic,68.962395,0.46,1718510813184,580.952,7071.5,4955.0,6473.5,2025-12-07 16:16:05
+DRREDDY.NS,Dr. Reddy's Laboratories Limited,Healthcare,Drug Manufacturers - Specialty & Generic,18.149729,0.63,1061634310144,430.609,1405.9,1020.0,1275.2,2025-12-07 16:16:07
+CIPLA.NS,Cipla Limited,Healthcare,Drug Manufacturers - Specialty & Generic,22.573845,0.85,1228458426368,407.531,1673.0,1335.0,1520.8,2025-12-07 16:16:02
+EICHERMOT.NS,Eicher Motors Limited,Consumer Cyclical,Auto Manufacturers,38.758938,0.97,1977148899328,805.256,7284.5,4646.0,7208.0,2025-12-07 16:16:08
+HEROMOTOCO.NS,Hero MotoCorp Limited,Consumer Cyclical,Auto Manufacturers,24.038534,2.05,1270618259456,1049.694,6388.5,3344.0,6350.5,2025-12-07 16:16:18
+GRASIM.NS,Grasim Industries Limited,Basic Materials,Building Materials,43.103718,0.36,1864263925760,1468.673,2977.8,2276.95,2747.0,2025-12-07 16:16:13
+BRITANNIA.NS,Britannia Industries Limited,Consumer Defensive,Packaged Foods,62.11316,1.26,1436211347456,154.997,6336.0,4506.0,5961.0,2025-12-07 16:16:00
+TATACONSUM.NS,Tata Consumer Products Limited,Consumer Defensive,Packaged Foods,84.759476,0.71,1150888574976,205.423,1202.8,882.9,1162.9,2025-12-07 16:17:00
+INDUSINDBK.NS,IndusInd Bank Limited,Financial Services,Banks - Regional,9.009111,1.92,677873975296,835.417,1086.55,606.0,870.1,2025-12-07 16:16:28
+BANDHANBNK.NS,Bandhan Bank Limited,Financial Services,Banks - Regional,18.383204,1.07,225929199616,153.395,192.48,128.16,140.08,2025-12-07 16:15:52
+FEDERALBNK.NS,The Federal Bank Limited,Financial Services,Banks - Regional,16.230433,0.46,637307060224,147.705,262.0,172.66,259.2,2025-12-07 16:16:12
+IDFCFIRSTB.NS,IDFC First Bank Limited,Financial Services,Banks - Regional,44.191257,0.31,694923362304,46.849,82.7,52.46,80.87,2025-12-07 16:16:24
+BANKBARODA.NS,Bank of Baroda Limited,Financial Services,Banks - Regional,7.867707,2.85,1513491791872,307.356,303.95,190.7,292.6,2025-12-07 16:15:56
+PNB.NS,Punjab National Bank,Financial Services,Banks - Regional,8.201483,2.38,1399673978880,123.783,127.8,85.46,121.71,2025-12-07 16:16:49
+AUBANK.NS,AU Small Finance Bank Limited,Financial Services,Banks - Regional,33.002403,0.1,716125831168,245.579,966.9,489.45,960.7,2025-12-07 16:15:45
+ADANIENT.NS,Adani Enterprises Limited,Energy,Thermal Coal,34.96527,0.06,2700160008192,445.61,2695.0,2026.55,2265.4,2025-12-07 16:15:40
+APOLLOHOSP.NS,Apollo Hospitals Enterprise Limited,Healthcare,Medical Care Facilities,61.72834,0.28,1033739763712,632.453,8099.5,6001.0,7189.5,2025-12-07 16:15:43
+BAJAJ-AUTO.NS,Bajaj Auto Limited,Consumer Cyclical,Auto Manufacturers,30.581482,2.31,2543435907072,1223.784,9490.0,7089.35,9109.0,2025-12-07 16:15:48
+BPCL.NS,Bharat Petroleum Corporation Limited,Energy,Oil & Gas Refining & Marketing,7.250956,4.16,1563163623424,219.838,381.55,234.01,360.3,2025-12-07 16:15:59
+COFORGE.NS,Coforge Limited,Technology,Information Technology Services,60.971027,0.81,662392012800,205.667,2005.36,1194.01,1977.9,2025-12-07 16:16:04
+LTIM.NS,LTIMindtree Limited,Technology,Information Technology Services,38.314457,1.06,1864628699136,789.736,6767.95,3802.0,6292.0,2025-12-07 16:16:35
+LTTS.NS,L&T Technology Services Limited,Technology,Information Technology Services,37.73572,1.23,481402454016,584.067,5645.0,3951.3,4546.4,2025-12-07 16:16:37
+MPHASIS.NS,Mphasis Limited,Technology,Information Technology Services,31.545446,1.93,562203262976,505.75,3237.95,2044.55,2953.6,2025-12-07 16:16:43
+PERSISTENT.NS,Persistent Systems Limited,Technology,Information Technology Services,60.973442,0.54,1015241768960,459.456,6788.9,4148.95,6520.5,2025-12-07 16:16:48
+TRENT.NS,Trent Limited,Consumer Cyclical,Apparel Retail,91.73466,0.12,1487389327360,171.62,7493.05,4158.0,4183.1,2025-12-07 16:17:08

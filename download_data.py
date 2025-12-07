@@ -136,19 +136,21 @@ def download_stocks():
 def download_stock_info():
     """
     Download stock fundamental info including PE Ratio, Dividend Yield, Market Cap, etc.
-    Updates stocks_metadata.json with both static and dynamic fundamental data.
+    Updates stocks_metadata.csv with both static and dynamic fundamental data.
     """
-    import json
-    
     print("\n📋 Downloading Stock Fundamental Data...")
     print("=" * 60)
-    
-    # Load existing metadata
-    metadata_file = DATA_DIR / "stocks_metadata.json"
+
+    # Load existing metadata from CSV
+    metadata_file = DATA_DIR / "stocks_metadata.csv"
     if metadata_file.exists():
-        with open(metadata_file, 'r') as f:
-            metadata = json.load(f)
-        print(f"  ℹ️ Loaded existing metadata for {len(metadata)} stocks")
+        try:
+            df = pd.read_csv(metadata_file, index_col='ticker')
+            metadata = df.to_dict(orient='index')
+            print(f"  ℹ️ Loaded existing metadata for {len(metadata)} stocks")
+        except Exception:
+            metadata = {}
+            print("  ℹ️ Creating new metadata file")
     else:
         metadata = {}
         print("  ℹ️ Creating new metadata file")
@@ -219,10 +221,11 @@ def download_stock_info():
         else:
             time.sleep(random.uniform(0.5, 1.0))
     
-    # Save updated metadata
-    with open(metadata_file, 'w') as f:
-        json.dump(metadata, f, indent=2, ensure_ascii=False)
-    
+    # Save updated metadata as CSV
+    df = pd.DataFrame.from_dict(metadata, orient='index')
+    df.index.name = 'ticker'
+    df.to_csv(metadata_file)
+
     print()
     print(f"  ✅ Updated metadata for {success_count}/{total} stocks")
     if failed_stocks:

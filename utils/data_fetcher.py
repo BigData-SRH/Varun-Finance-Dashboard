@@ -46,15 +46,15 @@ def _ensure_directories():
 _ensure_directories()
 
 
-def load_stock_metadata() -> Dict[str, Dict[str, str]]:
-    """Load pre-populated stock metadata from JSON file."""
-    metadata_file = os.path.join(_get_data_dir(), "stocks_metadata.json")
+def load_stock_metadata() -> Dict[str, Dict[str, Any]]:
+    """Load pre-populated stock metadata from CSV file (more reliable on cloud)."""
+    metadata_file = os.path.join(_get_data_dir(), "stocks_metadata.csv")
     if os.path.exists(metadata_file):
         try:
-            with open(metadata_file, 'r') as f:
-                return json.load(f)
-        except Exception:
-            pass
+            df = pd.read_csv(metadata_file, index_col='ticker')
+            return df.to_dict(orient='index')
+        except Exception as e:
+            print(f"Error loading metadata CSV: {e}")
     return {}
 
 
@@ -500,7 +500,7 @@ def get_data_status() -> Dict[str, Any]:
         'global_available': len(glob.glob(os.path.join(data_dir, "global", "*.csv"))),
         'indices_expected': len(INDICES),
         'stocks_expected': len(get_unique_stocks()),
-        'metadata_exists': os.path.exists(os.path.join(data_dir, "stocks_metadata.json"))
+        'metadata_exists': os.path.exists(os.path.join(data_dir, "stocks_metadata.csv"))
     }
     
     return status
