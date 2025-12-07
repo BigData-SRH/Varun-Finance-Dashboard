@@ -37,7 +37,13 @@ from .metrics import (
     calculate_all_metrics,
     format_large_number,
     format_percentage,
-    format_ratio
+    format_ratio,
+    # New technical indicators
+    calculate_52_week_high_low,
+    calculate_moving_average_position,
+    calculate_rsi,
+    get_rsi_status,
+    calculate_dividend_growth_rate
 )
 
 from .quality import (
@@ -56,7 +62,10 @@ from .charts import (
     plot_correlation_matrix,
     plot_portfolio_allocation,
     plot_portfolio_risk_return,
-    plot_top_performers_bar
+    plot_top_performers_bar,
+    # Sparklines
+    create_sparkline_svg,
+    create_sparkline_with_endpoint
 )
 
 __all__ = [
@@ -71,10 +80,15 @@ __all__ = [
     'calculate_sharpe_ratio', 'calculate_sortino_ratio', 'calculate_max_drawdown',
     'calculate_calmar_ratio', 'calculate_beta', 'calculate_all_metrics',
     'format_large_number', 'format_percentage', 'format_ratio',
+    # New technical indicators
+    'calculate_52_week_high_low', 'calculate_moving_average_position',
+    'calculate_rsi', 'get_rsi_status', 'calculate_dividend_growth_rate',
     # Quality
     'calculate_quality_score', 'assess_all_quality', 'select_top_stocks',
     # Charts
     'plot_cumulative_returns', 'plot_single_cumulative_returns', 'plot_drawdown', 'plot_annual_returns',
     'plot_rolling_volatility', 'plot_risk_return_scatter', 'plot_correlation_matrix',
-    'plot_portfolio_allocation', 'plot_portfolio_risk_return', 'plot_top_performers_bar'
+    'plot_portfolio_allocation', 'plot_portfolio_risk_return', 'plot_top_performers_bar',
+    # Sparklines
+    'create_sparkline_svg', 'create_sparkline_with_endpoint'
 ]

@@ -11,13 +11,13 @@ from utils import (
 
 st.set_page_config(page_title="About", page_icon="ℹ️", layout="wide")
 
-st.title("ℹ️ About This Dashboard")
+st.title("About This Dashboard")
 
 # =============================================================================
 # OVERVIEW
 # =============================================================================
 
-st.header("📊 Overview")
+st.header("Overview")
 
 st.markdown(f"""
 This dashboard provides comprehensive analysis of Indian market indices and their constituent stocks.
@@ -34,7 +34,7 @@ This dashboard provides comprehensive analysis of Indian market indices and thei
 # METHODOLOGY
 # =============================================================================
 
-st.header("📐 Methodology")
+st.header("Methodology")
 
 st.subheader("Data Source")
 st.markdown("""
@@ -94,7 +94,7 @@ Stocks are scored (0-100) based on data quality:
 # CONSTITUENTS
 # =============================================================================
 
-st.header("📋 Index Constituents")
+st.header("Index Constituents")
 
 tab1, tab2, tab3 = st.tabs(["Nifty 50", "Nifty Bank", "Nifty IT"])
 
@@ -120,7 +120,7 @@ with tab3:
 # LIMITATIONS
 # =============================================================================
 
-st.header("⚠️ Limitations")
+st.header("Limitations")
 
 st.markdown("""
 - **Data Quality**: Yahoo Finance data may have gaps or inaccuracies
@@ -134,7 +134,7 @@ st.markdown("""
 # DISCLAIMER
 # =============================================================================
 
-st.header("📜 Disclaimer")
+st.header("Disclaimer")
 
 st.error("""
 **IMPORTANT DISCLAIMER**
@@ -154,7 +154,7 @@ By using this dashboard, you acknowledge that you understand these limitations.
 # TECHNICAL INFO
 # =============================================================================
 
-st.header("🔧 Technical Information")
+st.header("Technical Information")
 
 col1, col2 = st.columns(2)
 
@@ -199,17 +199,17 @@ st.markdown("---")
 # AUTHOR
 # =============================================================================
 
-st.header("👤 Author")
+st.header("Author")
 
 col1, col2 = st.columns([1, 3])
 
 with col2:
     st.markdown("""
     **Varun H Shamaraju**
-    
-    💼 LinkedIn: [linkedin.com/in/varunhs306](https://www.linkedin.com/in/varunhs306/)
-    
-    🐙 GitHub: [github.com/varunhs306](https://github.com/varunhs306)
+
+    LinkedIn: [linkedin.com/in/varunhs306](https://www.linkedin.com/in/varunhs306/)
+
+    GitHub: [github.com/varunhs306](https://github.com/varunhs306)
     """)
 
 st.markdown("---")

@@ -16,7 +16,7 @@ from utils import (
 
 st.set_page_config(page_title="Portfolio", page_icon="💼", layout="wide")
 
-st.title("💼 Portfolio & Insights")
+st.title("Portfolio & Insights")
 st.markdown("Top performers, value opportunities, and portfolio suggestions.")
 
 # =============================================================================
@@ -68,7 +68,7 @@ with st.spinner("Loading data..."):
 # TOP PERFORMERS SECTION
 # =============================================================================
 
-st.header("🏆 Top Performers")
+st.header("Top Performers")
 
 col1, col2 = st.columns(2)
 
@@ -101,7 +101,7 @@ st.markdown("---")
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("💰 Top Dividend Payers")
+    st.subheader("Top Dividend Payers")
     top_div = metrics_df[metrics_df['Dividend Yield (%)'] > 0].nlargest(10, 'Dividend Yield (%)')[
         ['Ticker', 'Name', 'Index', 'Dividend Yield (%)']
     ].copy()
@@ -113,7 +113,7 @@ with col1:
     )
 
 with col2:
-    st.subheader("📉 Value Opportunities (Low PE)")
+    st.subheader("Value Opportunities (Low PE)")
     undervalued = metrics_df[
         (metrics_df['PE Ratio'] > 0) & 
         (metrics_df['PE Ratio'] < 15) &
@@ -134,7 +134,7 @@ with col2:
 # =============================================================================
 
 st.markdown("---")
-st.header("💼 Suggested Portfolio")
+st.header("Suggested Portfolio")
 
 st.markdown("""
 The portfolio is selected based on:
@@ -209,7 +209,7 @@ else:
 # =============================================================================
 
 st.markdown("---")
-st.header("💡 Key Insights")
+st.header("Key Insights")
 
 col1, col2 = st.columns(2)
 
@@ -261,6 +261,6 @@ with col2:
 
 st.markdown("---")
 st.warning("""
-**⚠️ Disclaimer:** This analysis is for educational purposes only. Past performance does not guarantee future returns. 
+**Disclaimer:** This analysis is for educational purposes only. Past performance does not guarantee future returns.
 Please consult a qualified financial advisor before making any investment decisions.
 """)

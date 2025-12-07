@@ -4,13 +4,19 @@ Indian Market Analysis Dashboard - Home Page
 
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 from utils import (
     INDICES, RISK_FREE_RATE, START_DATE,
     load_all_index_data, load_global_index_data, calculate_all_metrics,
     plot_cumulative_returns, plot_single_cumulative_returns, plot_drawdown,
-    plot_annual_returns, plot_rolling_volatility, plot_correlation_matrix
+    plot_annual_returns, plot_rolling_volatility, plot_correlation_matrix,
+    # New technical indicators
+    calculate_52_week_high_low, calculate_moving_average_position,
+    calculate_rsi, get_rsi_status,
+    # Sparklines
+    create_sparkline_with_endpoint
 )
 
 # =============================================================================
@@ -18,7 +24,7 @@ from utils import (
 # =============================================================================
 
 st.set_page_config(
-    page_title="Finance Dashboard",
+    page_title="Dashboard",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -145,7 +151,7 @@ def main():
     # ==========================================================================
     
     with st.sidebar:
-        st.markdown("### 📊 Market Snapshot")
+        st.markdown("### Market Snapshot")
         
         for name, data in index_data.items():
             current_price = data['Close'].iloc[-1]
@@ -164,7 +170,7 @@ def main():
         
         st.markdown(f"""
         <div class="refresh-time">
-            🔄 Last updated<br>{data_refresh_time.strftime('%d %b %Y, %H:%M:%S')}
+            Last updated<br>{data_refresh_time.strftime('%d %b %Y, %H:%M:%S')}
         </div>
         """, unsafe_allow_html=True)
 
@@ -172,7 +178,7 @@ def main():
     # HEADER
     # ==========================================================================
     
-    st.title("📈 Finance Dashboard")
+    st.title("Finance Dashboard")
     st.subheader("Comprehensive market analysis dashboard")
 
     # ==========================================================================
@@ -195,58 +201,174 @@ def main():
     current_year = datetime.now().year
     years_analyzed = current_year - start_year
     
-    st.markdown("### 🎯 Key Performance Indicators")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-label">📈 Best Total Return</div>
-            <div class="kpi-value">{all_metrics[best_return_idx]['Total Return (%)']:.1f}%</div>
-            <div class="kpi-index">{best_return_idx}</div>
-            <div class="kpi-insight">Highest wealth growth</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-label">📊 Best CAGR</div>
-            <div class="kpi-value">{all_metrics[best_cagr_idx]['CAGR (%)']:.2f}%</div>
-            <div class="kpi-index">{best_cagr_idx}</div>
-            <div class="kpi-insight">Consistent annual growth</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-label">⚖️ Best Sharpe Ratio</div>
-            <div class="kpi-value">{all_metrics[best_sharpe_idx]['Sharpe Ratio']:.2f}</div>
-            <div class="kpi-index">{best_sharpe_idx}</div>
-            <div class="kpi-insight">Best risk-adjusted return</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown(f"""
-        <div class="kpi-card">
-            <div class="kpi-label">🛡️ Lowest Volatility</div>
-            <div class="kpi-value">{all_metrics[lowest_vol_idx]['Volatility (%)']:.2f}%</div>
-            <div class="kpi-index">{lowest_vol_idx}</div>
-            <div class="kpi-insight">Most stable returns</div>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("### Key Performance Indicators")
 
-    st.caption(f"📅 Analysis Period: Jan {start_year} to Present (~{years_analyzed} years)")
+    # Calculate technical indicators for all indices
+    tech_indicators = {}
+    for name, data in index_data.items():
+        tech_indicators[name] = {
+            '52w': calculate_52_week_high_low(data),
+            'ma': calculate_moving_average_position(data),
+            'rsi': calculate_rsi(data)
+        }
+
+    # Tabbed KPI sections
+    kpi_tab1, kpi_tab2, kpi_tab3 = st.tabs(["Performance", "Risk", "Technical"])
+
+    with kpi_tab1:
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            sparkline = create_sparkline_with_endpoint(index_data[best_return_idx]['Close'])
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Best Total Return</div>
+                <div class="kpi-value">{all_metrics[best_return_idx]['Total Return (%)']:.1f}%</div>
+                <div class="kpi-index">{best_return_idx}</div>
+                {sparkline}
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            sparkline = create_sparkline_with_endpoint(index_data[best_cagr_idx]['Close'])
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Best CAGR</div>
+                <div class="kpi-value">{all_metrics[best_cagr_idx]['CAGR (%)']:.2f}%</div>
+                <div class="kpi-index">{best_cagr_idx}</div>
+                {sparkline}
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col3:
+            # Calculate 1-year returns for each index
+            one_year_returns = {}
+            for idx_name, idx_data in index_data.items():
+                if len(idx_data) >= 252:
+                    current_price = float(idx_data['Close'].iloc[-1])
+                    year_ago_price = float(idx_data['Close'].iloc[-252])
+                    one_year_returns[idx_name] = ((current_price / year_ago_price) - 1) * 100
+                else:
+                    one_year_returns[idx_name] = float('nan')
+
+            best_1y_idx = max(one_year_returns.keys(), key=lambda x: one_year_returns[x] if not pd.isna(one_year_returns[x]) else float('-inf'))
+            best_1y_return = one_year_returns[best_1y_idx]
+            sparkline = create_sparkline_with_endpoint(index_data[best_1y_idx]['Close'])
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Best 1Y Return</div>
+                <div class="kpi-value">{best_1y_return:.1f}%</div>
+                <div class="kpi-index">{best_1y_idx}</div>
+                {sparkline}
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col4:
+            # Win rate leader
+            best_winrate_idx = max(all_metrics.keys(), key=lambda x: all_metrics[x]['Win Rate (%)'])
+            sparkline = create_sparkline_with_endpoint(index_data[best_winrate_idx]['Close'])
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Best Win Rate</div>
+                <div class="kpi-value">{all_metrics[best_winrate_idx]['Win Rate (%)']:.1f}%</div>
+                <div class="kpi-index">{best_winrate_idx}</div>
+                {sparkline}
+            </div>
+            """, unsafe_allow_html=True)
+
+    with kpi_tab2:
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            sparkline = create_sparkline_with_endpoint(index_data[best_sharpe_idx]['Close'])
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Best Sharpe Ratio</div>
+                <div class="kpi-value">{all_metrics[best_sharpe_idx]['Sharpe Ratio']:.2f}</div>
+                <div class="kpi-index">{best_sharpe_idx}</div>
+                {sparkline}
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            sparkline = create_sparkline_with_endpoint(index_data[lowest_vol_idx]['Close'])
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Lowest Volatility</div>
+                <div class="kpi-value">{all_metrics[lowest_vol_idx]['Volatility (%)']:.2f}%</div>
+                <div class="kpi-index">{lowest_vol_idx}</div>
+                {sparkline}
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col3:
+            # Best Sortino
+            best_sortino_idx = max(all_metrics.keys(), key=lambda x: all_metrics[x]['Sortino Ratio'])
+            sparkline = create_sparkline_with_endpoint(index_data[best_sortino_idx]['Close'])
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Best Sortino Ratio</div>
+                <div class="kpi-value">{all_metrics[best_sortino_idx]['Sortino Ratio']:.2f}</div>
+                <div class="kpi-index">{best_sortino_idx}</div>
+                {sparkline}
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col4:
+            # Smallest max drawdown
+            best_dd_idx = max(all_metrics.keys(), key=lambda x: all_metrics[x]['Max Drawdown (%)'])
+            sparkline = create_sparkline_with_endpoint(index_data[best_dd_idx]['Close'])
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Smallest Drawdown</div>
+                <div class="kpi-value">{all_metrics[best_dd_idx]['Max Drawdown (%)']:.1f}%</div>
+                <div class="kpi-index">{best_dd_idx}</div>
+                {sparkline}
+            </div>
+            """, unsafe_allow_html=True)
+
+    with kpi_tab3:
+        st.markdown("##### Technical Indicators by Index")
+        tech_cols = st.columns(len(INDICES))
+
+        for i, (name, data) in enumerate(index_data.items()):
+            with tech_cols[i]:
+                ti = tech_indicators[name]
+                rsi_val = ti['rsi']
+                rsi_status = get_rsi_status(rsi_val)
+                ma_50_status = "Above" if ti['ma']['Above MA 50'] else "Below"
+                ma_200_status = "Above" if ti['ma']['Above MA 200'] else "Below"
+
+                # Color coding for RSI
+                if rsi_status == "Overbought":
+                    rsi_color = "#ef4444"
+                elif rsi_status == "Oversold":
+                    rsi_color = "#10b981"
+                else:
+                    rsi_color = "#64748b"
+
+                sparkline = create_sparkline_with_endpoint(data['Close'])
+                st.markdown(f"""
+                <div class="kpi-card">
+                    <div class="kpi-label">{name}</div>
+                    {sparkline}
+                    <div style="font-size: 0.75rem; margin-top: 8px;">
+                        <div><strong>RSI:</strong> <span style="color: {rsi_color}">{rsi_val:.1f} ({rsi_status})</span></div>
+                        <div><strong>vs MA 50:</strong> {ma_50_status} ({ti['ma']['Distance from MA 50 (%)']:.1f}%)</div>
+                        <div><strong>vs MA 200:</strong> {ma_200_status} ({ti['ma']['Distance from MA 200 (%)']:.1f}%)</div>
+                        <div><strong>52W High:</strong> {ti['52w']['Distance from 52W High (%)']:.1f}%</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    st.caption(f"Analysis Period: Jan {start_year} to Present (~{years_analyzed} years)")
     st.markdown("<br>", unsafe_allow_html=True)
 
     # ==========================================================================
     # KPI COMPARISON TABLE
     # ==========================================================================
     
-    st.markdown("### 📋 Index KPI Comparison")
+    st.markdown("### Index KPI Comparison")
     
     metrics_list = []
     for name in index_data.keys():
@@ -276,7 +398,7 @@ def main():
         hide_index=True
     )
     
-    st.caption(f"📅 All metrics calculated from Jan {start_year} to Present (~{years_analyzed} years of data)")
+    st.caption(f"All metrics calculated from Jan {start_year} to Present (~{years_analyzed} years of data)")
 
     st.markdown("---")
 
@@ -284,7 +406,7 @@ def main():
     # PERFORMANCE CHART WITH TIME FILTERS
     # ==========================================================================
     
-    st.markdown("### 📈 Performance Comparison")
+    st.markdown("### Performance Comparison")
     
     # Time period filter
     time_periods = {
@@ -342,10 +464,75 @@ def main():
     st.markdown("---")
 
     # ==========================================================================
+    # SIDE-BY-SIDE COMPARISON
+    # ==========================================================================
+
+    with st.expander("Side-by-Side Index Comparison", expanded=False):
+        comp_col1, comp_col2 = st.columns(2)
+
+        index_list = list(INDICES.keys())
+        with comp_col1:
+            index1 = st.selectbox("First Index", index_list, index=0, key="cmp_idx1")
+        with comp_col2:
+            index2 = st.selectbox("Second Index", index_list, index=1 if len(index_list) > 1 else 0, key="cmp_idx2")
+
+        if index1 != index2:
+            # Comparison metrics table
+            m1 = all_metrics[index1]
+            m2 = all_metrics[index2]
+            t1 = tech_indicators[index1]
+            t2 = tech_indicators[index2]
+
+            comparison_data = {
+                'Metric': [
+                    'CAGR (%)', 'Volatility (%)', 'Sharpe Ratio', 'Sortino Ratio',
+                    'Max Drawdown (%)', 'Win Rate (%)', 'RSI (14)',
+                    'Distance from 52W High (%)', 'vs MA 50 (%)', 'vs MA 200 (%)'
+                ],
+                index1: [
+                    f"{m1['CAGR (%)']:.2f}", f"{m1['Volatility (%)']:.2f}",
+                    f"{m1['Sharpe Ratio']:.2f}", f"{m1['Sortino Ratio']:.2f}",
+                    f"{m1['Max Drawdown (%)']:.2f}", f"{m1['Win Rate (%)']:.1f}",
+                    f"{t1['rsi']:.1f}",
+                    f"{t1['52w']['Distance from 52W High (%)']:.1f}",
+                    f"{t1['ma']['Distance from MA 50 (%)']:.1f}",
+                    f"{t1['ma']['Distance from MA 200 (%)']:.1f}"
+                ],
+                index2: [
+                    f"{m2['CAGR (%)']:.2f}", f"{m2['Volatility (%)']:.2f}",
+                    f"{m2['Sharpe Ratio']:.2f}", f"{m2['Sortino Ratio']:.2f}",
+                    f"{m2['Max Drawdown (%)']:.2f}", f"{m2['Win Rate (%)']:.1f}",
+                    f"{t2['rsi']:.1f}",
+                    f"{t2['52w']['Distance from 52W High (%)']:.1f}",
+                    f"{t2['ma']['Distance from MA 50 (%)']:.1f}",
+                    f"{t2['ma']['Distance from MA 200 (%)']:.1f}"
+                ]
+            }
+
+            comparison_df = pd.DataFrame(comparison_data)
+            st.dataframe(comparison_df, hide_index=True, use_container_width=True)
+
+            # Overlaid performance chart
+            st.markdown("##### Performance Overlay")
+            comparison_data_dict = {
+                index1: index_data[index1],
+                index2: index_data[index2]
+            }
+            fig = plot_cumulative_returns(
+                comparison_data_dict,
+                f"{index1} vs {index2}: Normalized Performance"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Select two different indices to compare.")
+
+    st.markdown("---")
+
+    # ==========================================================================
     # DETAILED INDEX ANALYSIS
     # ==========================================================================
 
-    st.markdown("### 🔍 Detailed Index Analysis")
+    st.markdown("### Detailed Index Analysis")
 
     # Index selector
     selected_index = st.selectbox(
@@ -368,30 +555,51 @@ def main():
     col5.metric("Max Drawdown", f"{metrics['Max Drawdown (%)']:.2f}%")
 
     # Interactive charts
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "📈 Performance", "📉 Drawdown", "📊 Annual Returns", "🌡️ Volatility"
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "Price History", "Performance", "Drawdown", "Annual Returns", "Volatility"
     ])
 
     with tab1:
+        # Raw price chart (not normalized)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=data.index,
+            y=data['Close'],
+            mode='lines',
+            name=selected_index,
+            line=dict(width=2, color='#3b82f6'),
+            hovertemplate=f'{selected_index}<br>Date: %{{x}}<br>Price: ₹%{{y:,.2f}}<extra></extra>'
+        ))
+        fig.update_layout(
+            title=f"{selected_index} - Price History",
+            xaxis_title="Date",
+            yaxis_title="Price (₹)",
+            hovermode='x unified',
+            template='plotly_white',
+            height=500
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    with tab2:
         fig = plot_single_cumulative_returns(
             data,
             selected_index,
-            f"{selected_index} - Cumulative Returns"
+            f"{selected_index} - Cumulative Returns (%)"
         )
-        st.plotly_chart(fig, width='stretch')
-
-    with tab2:
-        fig = plot_drawdown(data, selected_index)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
 
     with tab3:
-        fig = plot_annual_returns(data, selected_index)
-        st.plotly_chart(fig, width='stretch')
+        fig = plot_drawdown(data, selected_index)
+        st.plotly_chart(fig, use_container_width=True)
 
     with tab4:
+        fig = plot_annual_returns(data, selected_index)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with tab5:
         window = st.slider("Rolling Window (days)", 30, 252, 90, key="vol_window")
         fig = plot_rolling_volatility(data, selected_index, window)
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
 
@@ -399,7 +607,7 @@ def main():
     # INDEX CORRELATIONS (Collapsible)
     # ==========================================================================
 
-    with st.expander("🔗 Index Correlations", expanded=False):
+    with st.expander("Index Correlations", expanded=False):
         returns_df = pd.DataFrame({
             name: d['Daily_Return'] for name, d in index_data.items()
         }).dropna()
@@ -430,7 +638,7 @@ def main():
     # GLOBAL MARKET CONTEXT (Collapsible)
     # ==========================================================================
 
-    with st.expander("🌍 Global Market Context", expanded=False):
+    with st.expander("Global Market Context", expanded=False):
         st.markdown("#### How Indian Indices Compare to Global Markets")
         
         with st.spinner("Loading global market data..."):
@@ -502,13 +710,13 @@ def main():
                 global_avg_sharpe = sum(m['Sharpe Ratio'] for m in global_metrics.values()) / len(global_metrics)
                 
                 st.markdown(f"""
-                📊 **Best Global CAGR:** {best_global_cagr[0]} ({best_global_cagr[1]['CAGR (%)']:.2f}%)
-                
-                📈 **Best Indian CAGR:** {best_indian_cagr[0]} ({best_indian_cagr[1]['CAGR (%)']:.2f}%)
-                
-                ⚖️ **Avg Sharpe (India):** {indian_avg_sharpe:.2f}
-                
-                🌐 **Avg Sharpe (Global):** {global_avg_sharpe:.2f}
+                **Best Global CAGR:** {best_global_cagr[0]} ({best_global_cagr[1]['CAGR (%)']:.2f}%)
+
+                **Best Indian CAGR:** {best_indian_cagr[0]} ({best_indian_cagr[1]['CAGR (%)']:.2f}%)
+
+                **Avg Sharpe (India):** {indian_avg_sharpe:.2f}
+
+                **Avg Sharpe (Global):** {global_avg_sharpe:.2f}
                 """)
                 
                 if indian_avg_sharpe > global_avg_sharpe:
@@ -522,61 +730,61 @@ def main():
     # UNDERSTANDING THE METRICS (Educational Section)
     # ==========================================================================
 
-    with st.expander("📚 Understanding the Metrics & How to Invest", expanded=False):
+    with st.expander("Understanding the Metrics & How to Invest", expanded=False):
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("#### 📖 What Do These Metrics Mean?")
+            st.markdown("#### What Do These Metrics Mean?")
             
             st.markdown("""
-            **📈 Total Return**
+            **Total Return**
             - The overall percentage gain/loss over the entire period
             - Higher is better for wealth accumulation
-            
-            **📊 CAGR (Compound Annual Growth Rate)**
+
+            **CAGR (Compound Annual Growth Rate)**
             - Average yearly return, accounting for compounding
             - Best metric for comparing investments over different time periods
             - Example: 15% CAGR means ₹1 lakh becomes ~₹2 lakh in 5 years
-            
-            **🌡️ Volatility**
+
+            **Volatility**
             - Measures price fluctuation (standard deviation of returns)
             - Lower volatility = smoother, more predictable returns
             - Higher volatility = bigger swings, more risk
-            
-            **⚖️ Sharpe Ratio**
+
+            **Sharpe Ratio**
             - Return earned per unit of risk taken
             - Above 1.0 = Good, Above 2.0 = Excellent
             - Helps compare investments with different risk levels
-            
-            **📉 Max Drawdown**
+
+            **Max Drawdown**
             - Largest peak-to-trough decline
             - Shows worst-case scenario during market crashes
             - Lower is better for risk management
             """)
         
         with col2:
-            st.markdown("#### 💰 How to Invest in Indices?")
-            
+            st.markdown("#### How to Invest in Indices?")
+
             st.markdown("""
-            > **Note:** You cannot directly buy an index like Nifty 50. 
+            > **Note:** You cannot directly buy an index like Nifty 50.
             > But you can invest through **Index Funds** and **ETFs**!
-            
-            **🏦 Nifty 50 Investment Options:**
+
+            **Nifty 50 Investment Options:**
             - **ETFs:** Nippon Nifty BeES, SBI Nifty 50 ETF, ICICI Nifty 50 ETF
             - **Index Funds:** UTI Nifty 50 Index Fund, HDFC Nifty 50 Index Fund
-            
-            **🏛️ Nifty Bank Investment Options:**
+
+            **Nifty Bank Investment Options:**
             - **ETFs:** Nippon Bank BeES, Kotak Nifty Bank ETF
             - **Index Funds:** ICICI Pru Nifty Bank Index Fund
-            
-            **💻 Nifty IT Investment Options:**
+
+            **Nifty IT Investment Options:**
             - **ETFs:** ICICI Pru IT ETF, Nippon IT ETF
             - **Index Funds:** ICICI Pru Nifty IT Index Fund
-            
+
             ---
-            
-            **📌 Why Track Indices?**
+
+            **Why Track Indices?**
             - Benchmark for portfolio performance
             - Understand market trends and sectors
             - Low-cost diversification through index investing
@@ -585,8 +793,8 @@ def main():
         
         st.markdown("---")
         st.caption("""
-        ⚠️ **Disclaimer:** This dashboard is for educational and informational purposes only. 
-        It does not constitute financial advice. Always consult a qualified financial advisor 
+        **Disclaimer:** This dashboard is for educational and informational purposes only.
+        It does not constitute financial advice. Always consult a qualified financial advisor
         before making investment decisions. Past performance does not guarantee future results.
         """)
 

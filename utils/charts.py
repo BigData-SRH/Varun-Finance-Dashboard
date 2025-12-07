@@ -11,6 +11,107 @@ import plotly.graph_objects as go
 from .config import COLORS, INDICES, RISK_FREE_RATE
 
 
+# =============================================================================
+# SPARKLINE FUNCTIONS
+# =============================================================================
+
+def create_sparkline_svg(data: pd.Series, width: int = 100, height: int = 35,
+                         color: str = "#3b82f6", days: int = 30) -> str:
+    """
+    Create an inline SVG sparkline for KPI cards.
+
+    Args:
+        data: Series of price/value data
+        width: SVG width in pixels
+        height: SVG height in pixels
+        color: Line color (hex)
+        days: Number of recent days to show
+
+    Returns:
+        HTML string with SVG sparkline
+    """
+    if data is None or len(data) < 2:
+        return ""
+
+    # Get last N days of data
+    values = data.tail(days).values
+
+    if len(values) < 2:
+        return ""
+
+    # Normalize values to fit in SVG
+    min_val = values.min()
+    max_val = values.max()
+
+    if max_val == min_val:
+        # Flat line
+        normalized = [height / 2] * len(values)
+    else:
+        normalized = ((values - min_val) / (max_val - min_val)) * (height - 6) + 3
+
+    # Create SVG path points
+    step = (width - 4) / (len(values) - 1)
+    points = " ".join([f"{2 + i * step:.1f},{height - v:.1f}" for i, v in enumerate(normalized)])
+
+    # Determine color based on trend (green if up, red if down)
+    trend_color = "#10b981" if values[-1] >= values[0] else "#ef4444"
+    line_color = trend_color if color == "auto" else color
+
+    svg = f'''<svg width="{width}" height="{height}" style="display: block; margin: 5px auto 0;">
+        <polyline points="{points}" fill="none" stroke="{line_color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>'''
+
+    return svg
+
+
+def create_sparkline_with_endpoint(data: pd.Series, width: int = 100, height: int = 35,
+                                    days: int = 30) -> str:
+    """
+    Create sparkline with highlighted endpoint dot.
+
+    Args:
+        data: Series of price/value data
+        width: SVG width
+        height: SVG height
+        days: Number of recent days
+
+    Returns:
+        HTML string with SVG sparkline
+    """
+    if data is None or len(data) < 2:
+        return ""
+
+    values = data.tail(days).values
+
+    if len(values) < 2:
+        return ""
+
+    min_val = values.min()
+    max_val = values.max()
+
+    if max_val == min_val:
+        normalized = [height / 2] * len(values)
+    else:
+        normalized = ((values - min_val) / (max_val - min_val)) * (height - 8) + 4
+
+    step = (width - 6) / (len(values) - 1)
+    points = " ".join([f"{3 + i * step:.1f},{height - v:.1f}" for i, v in enumerate(normalized)])
+
+    # Color based on trend
+    trend_color = "#10b981" if values[-1] >= values[0] else "#ef4444"
+
+    # Last point coordinates
+    last_x = 3 + (len(values) - 1) * step
+    last_y = height - normalized[-1]
+
+    svg = f'''<svg width="{width}" height="{height}" style="display: block; margin: 5px auto 0;">
+        <polyline points="{points}" fill="none" stroke="{trend_color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="3" fill="{trend_color}"/>
+    </svg>'''
+
+    return svg
+
+
 def plot_cumulative_returns(data_dict: Dict[str, pd.DataFrame], title: str = "Cumulative Returns") -> go.Figure:
     """Create interactive cumulative returns chart (normalized to base 100 for comparison)."""
     fig = go.Figure()
