@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Optional, Dict, Tuple, List, Any
 from functools import wraps
 import os
+import glob
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -362,36 +363,37 @@ def fetch_stock_data(
 @st.cache_data(ttl=86400, show_spinner=False)
 def fetch_stock_info(ticker: str) -> Dict[str, Any]:
     """
-    Fetch fundamental data for a stock.
-    Uses ONLY metadata JSON (NO API calls unless explicitly needed).
+    Fetch fundamental data for a stock from pre-downloaded metadata.
+    Uses ONLY metadata JSON (NO API calls) for cloud compatibility.
     """
-    # Load from metadata first
     metadata = load_stock_metadata()
     if ticker in metadata:
+        m = metadata[ticker]
         return {
             'ticker': ticker,
-            'name': metadata[ticker].get('name', ticker.replace('.NS', '')),
-            'sector': metadata[ticker].get('sector', 'N/A'),
-            'industry': metadata[ticker].get('industry', 'N/A'),
-            # These would require API call - return NaN for now
-            'market_cap': np.nan,
-            'pe_ratio': np.nan,
-            'forward_pe': np.nan,
-            'pb_ratio': np.nan,
-            'dividend_yield': np.nan,
+            'name': m.get('name', ticker.replace('.NS', '')),
+            'sector': m.get('sector', 'N/A'),
+            'industry': m.get('industry', 'N/A'),
+            'market_cap': m.get('market_cap', np.nan),
+            'pe_ratio': m.get('pe_ratio', np.nan),
+            'forward_pe': np.nan,  # Not in metadata
+            'pb_ratio': np.nan,  # Not in metadata
+            'dividend_yield': m.get('dividend_yield', np.nan),
+            'current_price': m.get('current_price', np.nan),
+            'fifty_two_week_high': m.get('52_week_high', np.nan),
+            'fifty_two_week_low': m.get('52_week_low', np.nan),
+            'book_value': m.get('book_value', np.nan),
+            # These require live API, return NaN for metadata-only
             'roe': np.nan,
             'roa': np.nan,
             'debt_to_equity': np.nan,
-            'current_price': np.nan,
-            'fifty_two_week_high': np.nan,
-            'fifty_two_week_low': np.nan,
             'avg_volume': np.nan,
             'beta': np.nan,
             'target_mean_price': np.nan,
             'recommendation': 'N/A',
             'num_analysts': np.nan,
         }
-    
+
     # Minimal fallback
     return {
         'ticker': ticker,
@@ -405,55 +407,64 @@ def fetch_stock_info(ticker: str) -> Dict[str, Any]:
 def fetch_stock_info_lazy(ticker: str) -> Dict[str, Any]:
     """
     Fetch stock info lazily when selected.
-    For Stock Explorer page - combines metadata with live API data.
+    Uses pre-downloaded metadata first, then optionally tries API for extra data.
+    Cloud-safe: works even if yfinance API fails.
     """
     # Check session state first
     cache_key = f"stock_info_{ticker}"
     if cache_key in st.session_state:
         return st.session_state[cache_key]
-    
-    # Start with metadata
+
+    # Load all available data from metadata FIRST
     metadata = load_stock_metadata()
+    m = metadata.get(ticker, {})
+
     info = {
         'ticker': ticker,
-        'name': metadata.get(ticker, {}).get('name', ticker.replace('.NS', '')),
-        'sector': metadata.get(ticker, {}).get('sector', 'N/A'),
-        'industry': metadata.get(ticker, {}).get('industry', 'N/A'),
+        'name': m.get('name', ticker.replace('.NS', '')),
+        'sector': m.get('sector', 'N/A'),
+        'industry': m.get('industry', 'N/A'),
+        'market_cap': m.get('market_cap', np.nan),
+        'pe_ratio': m.get('pe_ratio', np.nan),
+        'forward_pe': np.nan,
+        'pb_ratio': np.nan,
+        'dividend_yield': m.get('dividend_yield', np.nan),
+        'current_price': m.get('current_price', np.nan),
+        'fifty_two_week_high': m.get('52_week_high', np.nan),
+        'fifty_two_week_low': m.get('52_week_low', np.nan),
+        'book_value': m.get('book_value', np.nan),
+        # API-only fields default to NaN
+        'roe': np.nan,
+        'roa': np.nan,
+        'debt_to_equity': np.nan,
+        'avg_volume': np.nan,
+        'beta': np.nan,
+        'target_mean_price': np.nan,
+        'recommendation': 'N/A',
+        'num_analysts': np.nan,
     }
-    
-    # Try to fetch live data (PE, PB, Market Cap, etc.) from API
+
+    # Optionally try API for additional data (may fail on cloud - that's OK)
     try:
         stock = yf.Ticker(ticker)
         stock_info = stock.info
-        
-        info.update({
-            'market_cap': stock_info.get('marketCap', np.nan),
-            'pe_ratio': stock_info.get('trailingPE', np.nan),
-            'forward_pe': stock_info.get('forwardPE', np.nan),
-            'pb_ratio': stock_info.get('priceToBook', np.nan),
-            'dividend_yield': stock_info.get('dividendYield', np.nan),
-            'roe': stock_info.get('returnOnEquity', np.nan),
-            'roa': stock_info.get('returnOnAssets', np.nan),
-            'debt_to_equity': stock_info.get('debtToEquity', np.nan),
-            'current_price': stock_info.get('currentPrice', stock_info.get('regularMarketPrice', np.nan)),
-            'fifty_two_week_high': stock_info.get('fiftyTwoWeekHigh', np.nan),
-            'fifty_two_week_low': stock_info.get('fiftyTwoWeekLow', np.nan),
-            'avg_volume': stock_info.get('averageVolume', np.nan),
-            'beta': stock_info.get('beta', np.nan),
-            'target_mean_price': stock_info.get('targetMeanPrice', np.nan),
-            'recommendation': stock_info.get('recommendationKey', 'N/A'),
-            'num_analysts': stock_info.get('numberOfAnalystOpinions', np.nan),
-        })
+
+        if stock_info:
+            # Only update fields that API provides (don't overwrite good metadata with None)
+            info['forward_pe'] = stock_info.get('forwardPE', np.nan)
+            info['pb_ratio'] = stock_info.get('priceToBook', np.nan)
+            info['roe'] = stock_info.get('returnOnEquity', np.nan)
+            info['roa'] = stock_info.get('returnOnAssets', np.nan)
+            info['debt_to_equity'] = stock_info.get('debtToEquity', np.nan)
+            info['avg_volume'] = stock_info.get('averageVolume', np.nan)
+            info['beta'] = stock_info.get('beta', np.nan)
+            info['target_mean_price'] = stock_info.get('targetMeanPrice', np.nan)
+            info['recommendation'] = stock_info.get('recommendationKey', 'N/A')
+            info['num_analysts'] = stock_info.get('numberOfAnalystOpinions', np.nan)
     except Exception as e:
-        print(f"Could not fetch live data for {ticker}: {e}")
-        # Fill with NaN
-        info.update({
-            'market_cap': np.nan,
-            'pe_ratio': np.nan,
-            'pb_ratio': np.nan,
-            'dividend_yield': np.nan
-        })
-    
+        # API failed - that's OK, we still have metadata values
+        print(f"API fetch skipped for {ticker}: {e}")
+
     # Cache in session state
     st.session_state[cache_key] = info
     return info
@@ -479,16 +490,17 @@ def get_stock_index(ticker: str) -> Optional[str]:
 def get_data_status() -> Dict[str, Any]:
     """Get status of CSV data availability."""
     manifest = load_manifest()
-    
+    data_dir = _get_data_dir()
+
     status = {
-        'manifest_exists': MANIFEST_FILE.exists(),
+        'manifest_exists': os.path.exists(os.path.join(data_dir, "manifest.json")),
         'last_updated': manifest.get('last_updated', 'Unknown'),
-        'indices_available': len(list(INDICES_DIR.glob("*.csv"))),
-        'stocks_available': len(list(STOCKS_DIR.glob("*.csv"))),
-        'global_available': len(list(GLOBAL_DIR.glob("*.csv"))),
+        'indices_available': len(glob.glob(os.path.join(data_dir, "indices", "*.csv"))),
+        'stocks_available': len(glob.glob(os.path.join(data_dir, "stocks", "*.csv"))),
+        'global_available': len(glob.glob(os.path.join(data_dir, "global", "*.csv"))),
         'indices_expected': len(INDICES),
         'stocks_expected': len(get_unique_stocks()),
-        'metadata_exists': METADATA_FILE.exists()
+        'metadata_exists': os.path.exists(os.path.join(data_dir, "stocks_metadata.json"))
     }
     
     return status
