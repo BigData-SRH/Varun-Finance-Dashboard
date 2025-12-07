@@ -21,6 +21,7 @@ from .data_fetcher import (
     load_all_index_data,
     load_global_index_data,
     load_all_stock_data,
+    fetch_stock_info_lazy,  # New lazy loading function
     get_unique_stocks,
     get_stock_index
 )

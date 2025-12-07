@@ -356,10 +356,19 @@ def _fetch_corporate_events_internal(ticker: str):
     return div_df, split_df, upcoming
 
 
-with st.spinner("Loading data..."):
-    index_data = load_all_index_data()
-    stock_data, stock_info = load_all_stock_data()
-    metrics_df = compute_stock_metrics(index_data, stock_data, stock_info)
+# SESSION STATE CACHING: Load data once per session
+if 'stock_explorer_data' not in st.session_state or st.sidebar.button("🔄 Refresh", help="Reload data"):
+    with st.spinner("Loading data..."):
+        st.session_state.stock_explorer_data = {
+            'index_data': load_all_index_data(),
+            'stock_data': load_all_stock_data()[0],  # Only historical data
+            'stock_info': load_all_stock_data()[1]   # Metadata only
+        }
+
+index_data = st.session_state.stock_explorer_data['index_data']
+stock_data = st.session_state.stock_explorer_data['stock_data']
+stock_info = st.session_state.stock_explorer_data['stock_info']
+metrics_df = compute_stock_metrics(index_data, stock_data, stock_info)
 
 # =============================================================================
 # FILTERS
@@ -419,7 +428,11 @@ with col1:
 
 if selected_stock and selected_stock in stock_data:
     s_data = stock_data[selected_stock]
-    s_info = stock_info.get(selected_stock, {})
+    
+    # LAZY LOADING: Fetch detailed info only for selected stock
+    from utils import fetch_stock_info_lazy
+    s_info = fetch_stock_info_lazy(selected_stock)
+    
     s_metrics = filtered_df[filtered_df['Ticker'] == selected_stock].iloc[0]
     
     st.markdown("---")

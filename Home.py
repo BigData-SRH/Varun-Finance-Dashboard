@@ -137,14 +137,24 @@ st.markdown("""
 # =============================================================================
 
 def main():
-    # Load data first
-    with st.spinner("Loading market data..."):
-        index_data = load_all_index_data()
-        data_refresh_time = datetime.now()
+    # SESSION STATE CACHING: Load data once per session
+    if 'index_data' not in st.session_state or st.sidebar.button("🔄 Refresh Data", help="Reload market data"):
+        with st.spinner("Loading market data..."):
+            st.session_state.index_data = load_all_index_data()
+            st.session_state.data_refresh_time = datetime.now()
+    
+    index_data = st.session_state.index_data
+    data_refresh_time = st.session_state.data_refresh_time
 
     if not index_data:
-        st.error("Failed to load index data. Please try again.")
+        st.error("Failed to load index data. Please try again later.")
+        st.info("This may be due to rate limiting from Yahoo Finance. Please wait a few minutes and click 'Refresh Data'.")
         return
+    
+    # Check if any indices failed to load
+    missing_indices = [name for name in INDICES.keys() if name not in index_data]
+    if missing_indices:
+        st.warning(f"⚠️ Some indices failed to load: {', '.join(missing_indices)}. This may be due to rate limiting.")
 
     # ==========================================================================
     # SIDEBAR: Market Snapshot & Index Cards
@@ -470,61 +480,66 @@ def main():
     with st.expander("Side-by-Side Index Comparison", expanded=False):
         comp_col1, comp_col2 = st.columns(2)
 
-        index_list = list(INDICES.keys())
-        with comp_col1:
-            index1 = st.selectbox("First Index", index_list, index=0, key="cmp_idx1")
-        with comp_col2:
-            index2 = st.selectbox("Second Index", index_list, index=1 if len(index_list) > 1 else 0, key="cmp_idx2")
-
-        if index1 != index2:
-            # Comparison metrics table
-            m1 = all_metrics[index1]
-            m2 = all_metrics[index2]
-            t1 = tech_indicators[index1]
-            t2 = tech_indicators[index2]
-
-            comparison_data = {
-                'Metric': [
-                    'CAGR (%)', 'Volatility (%)', 'Sharpe Ratio', 'Sortino Ratio',
-                    'Max Drawdown (%)', 'Win Rate (%)', 'RSI (14)',
-                    'Distance from 52W High (%)', 'vs MA 50 (%)', 'vs MA 200 (%)'
-                ],
-                index1: [
-                    f"{m1['CAGR (%)']:.2f}", f"{m1['Volatility (%)']:.2f}",
-                    f"{m1['Sharpe Ratio']:.2f}", f"{m1['Sortino Ratio']:.2f}",
-                    f"{m1['Max Drawdown (%)']:.2f}", f"{m1['Win Rate (%)']:.1f}",
-                    f"{t1['rsi']:.1f}",
-                    f"{t1['52w']['Distance from 52W High (%)']:.1f}",
-                    f"{t1['ma']['Distance from MA 50 (%)']:.1f}",
-                    f"{t1['ma']['Distance from MA 200 (%)']:.1f}"
-                ],
-                index2: [
-                    f"{m2['CAGR (%)']:.2f}", f"{m2['Volatility (%)']:.2f}",
-                    f"{m2['Sharpe Ratio']:.2f}", f"{m2['Sortino Ratio']:.2f}",
-                    f"{m2['Max Drawdown (%)']:.2f}", f"{m2['Win Rate (%)']:.1f}",
-                    f"{t2['rsi']:.1f}",
-                    f"{t2['52w']['Distance from 52W High (%)']:.1f}",
-                    f"{t2['ma']['Distance from MA 50 (%)']:.1f}",
-                    f"{t2['ma']['Distance from MA 200 (%)']:.1f}"
-                ]
-            }
-
-            comparison_df = pd.DataFrame(comparison_data)
-            st.dataframe(comparison_df, hide_index=True, use_container_width=True)
-
-            # Overlaid performance chart
-            st.markdown("##### Performance Overlay")
-            comparison_data_dict = {
-                index1: index_data[index1],
-                index2: index_data[index2]
-            }
-            fig = plot_cumulative_returns(
-                comparison_data_dict,
-                f"{index1} vs {index2}: Normalized Performance"
-            )
-            st.plotly_chart(fig, use_container_width=True)
+        # Only show available indices
+        index_list = [idx for idx in INDICES.keys() if idx in index_data]
+        
+        if len(index_list) < 2:
+            st.warning("Not enough indices loaded for comparison. Please refresh the page.")
         else:
-            st.info("Select two different indices to compare.")
+            with comp_col1:
+                index1 = st.selectbox("First Index", index_list, index=0, key="cmp_idx1")
+            with comp_col2:
+                index2 = st.selectbox("Second Index", index_list, index=1 if len(index_list) > 1 else 0, key="cmp_idx2")
+
+            if index1 != index2 and index1 in all_metrics and index2 in all_metrics:
+                # Comparison metrics table
+                m1 = all_metrics[index1]
+                m2 = all_metrics[index2]
+                t1 = tech_indicators[index1]
+                t2 = tech_indicators[index2]
+
+                comparison_data = {
+                    'Metric': [
+                        'CAGR (%)', 'Volatility (%)', 'Sharpe Ratio', 'Sortino Ratio',
+                        'Max Drawdown (%)', 'Win Rate (%)', 'RSI (14)',
+                        'Distance from 52W High (%)', 'vs MA 50 (%)', 'vs MA 200 (%)'
+                    ],
+                    index1: [
+                        f"{m1['CAGR (%)']:.2f}", f"{m1['Volatility (%)']:.2f}",
+                        f"{m1['Sharpe Ratio']:.2f}", f"{m1['Sortino Ratio']:.2f}",
+                        f"{m1['Max Drawdown (%)']:.2f}", f"{m1['Win Rate (%)']:.1f}",
+                        f"{t1['rsi']:.1f}",
+                        f"{t1['52w']['Distance from 52W High (%)']:.1f}",
+                        f"{t1['ma']['Distance from MA 50 (%)']:.1f}",
+                        f"{t1['ma']['Distance from MA 200 (%)']:.1f}"
+                    ],
+                    index2: [
+                        f"{m2['CAGR (%)']:.2f}", f"{m2['Volatility (%)']:.2f}",
+                        f"{m2['Sharpe Ratio']:.2f}", f"{m2['Sortino Ratio']:.2f}",
+                        f"{m2['Max Drawdown (%)']:.2f}", f"{m2['Win Rate (%)']:.1f}",
+                        f"{t2['rsi']:.1f}",
+                        f"{t2['52w']['Distance from 52W High (%)']:.1f}",
+                        f"{t2['ma']['Distance from MA 50 (%)']:.1f}",
+                        f"{t2['ma']['Distance from MA 200 (%)']:.1f}"
+                    ]
+                }
+
+                comparison_df = pd.DataFrame(comparison_data)
+                st.dataframe(comparison_df, hide_index=True, use_container_width=True)
+
+                # Overlaid performance chart
+                st.markdown("##### Performance Overlay")
+                comparison_data_dict = {
+                    index1: index_data[index1],
+                    index2: index_data[index2]
+                }
+                fig = plot_cumulative_returns(
+                    comparison_data_dict,
+                    f"{index1} vs {index2}: Normalized Performance"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Select two different indices to compare.")
 
     st.markdown("---")
 

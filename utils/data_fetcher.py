@@ -19,6 +19,7 @@ import pickle
 import hashlib
 
 from .config import INDICES, CONSTITUENTS, START_DATE, END_DATE
+import json
 
 warnings.filterwarnings('ignore')
 
@@ -29,9 +30,23 @@ warnings.filterwarnings('ignore')
 CACHE_DIR = Path(".cache")
 CACHE_DIR.mkdir(exist_ok=True)
 
-# Cache durations in hours
-HISTORICAL_DATA_CACHE_HOURS = 4  # Historical price data
-STOCK_INFO_CACHE_HOURS = 24      # Fundamental data (changes less frequently)
+# Cache durations in hours (INCREASED for better performance)
+HISTORICAL_DATA_CACHE_HOURS = 24  # Historical price data (was 4)
+STOCK_INFO_CACHE_HOURS = 72       # Fundamental data (was 24)
+
+# Pre-populated metadata
+METADATA_FILE = Path("data/stocks_metadata.json")
+
+
+def load_stock_metadata() -> Dict[str, Dict[str, str]]:
+    """Load pre-populated stock metadata from JSON file."""
+    if METADATA_FILE.exists():
+        try:
+            with open(METADATA_FILE, 'r') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
 
 
 def get_cache_key(*args) -> str:
@@ -180,7 +195,7 @@ def batch_download_historical(
 # INDIVIDUAL FETCH FUNCTIONS (with caching)
 # =============================================================================
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=14400, show_spinner=False)  # 4 hours (was 1 hour)
 def fetch_index_data(
     ticker: str,
     start_date: str = START_DATE,
@@ -328,7 +343,7 @@ def load_all_index_data() -> Dict[str, pd.DataFrame]:
     return index_data
 
 
-@st.cache_data(ttl=3600, show_spinner="Loading global indices...")
+@st.cache_data(ttl=14400, show_spinner="Loading global indices...")  # 4 hours
 def load_global_index_data() -> Dict[str, pd.DataFrame]:
     """Load data for global indices using batch download."""
     from .config import GLOBAL_INDICES
@@ -357,54 +372,81 @@ def load_global_index_data() -> Dict[str, pd.DataFrame]:
     return global_data
 
 
-@st.cache_data(ttl=3600, show_spinner="Loading stock data...")
+@st.cache_data(ttl=14400, show_spinner="Loading stock data...")  # 4 hours
 def load_all_stock_data() -> Tuple[Dict[str, pd.DataFrame], Dict[str, Dict[str, Any]]]:
     """
-    Load data for all constituent stocks using batch download.
+    Load ONLY historical price data for all stocks.
+    Stock info is loaded lazily when needed.
 
     Returns:
-        Tuple of (stock_data dict, stock_info dict)
+        Tuple of (stock_data dict, stock_info dict with metadata)
     """
     all_stocks = sorted(list(set(sum(CONSTITUENTS.values(), []))))
 
-    # Check disk cache first for complete data
-    cache_key = get_cache_key("all_stocks_complete", START_DATE, END_DATE)
+    # Check disk cache first for historical data only
+    cache_key = get_cache_key("all_stocks_historical", START_DATE, END_DATE)
     cached = get_cached_data(cache_key, HISTORICAL_DATA_CACHE_HOURS)
     if cached is not None:
-        return cached
+        stock_data, _ = cached
+        # Load metadata for all stocks
+        metadata = load_stock_metadata()
+        stock_info = {ticker: metadata.get(ticker, {'name': ticker.replace('.NS', ''), 'sector': 'N/A', 'industry': 'N/A'}) for ticker in all_stocks}
+        return stock_data, stock_info
 
     # BATCH DOWNLOAD: All historical data in ONE API call
-    progress_bar = st.progress(0, text="Downloading historical data...")
-    stock_data = batch_download_historical(all_stocks, START_DATE, END_DATE)
-    progress_bar.progress(0.5, text="Historical data loaded. Fetching stock info...")
+    with st.spinner("Downloading historical data..."):
+        stock_data = batch_download_historical(all_stocks, START_DATE, END_DATE)
 
-    # RATE-LIMITED: Fetch stock info (cannot be batched, so add delays)
+    # Use pre-populated metadata (NO API calls for fundamentals)
+    metadata = load_stock_metadata()
     stock_info: Dict[str, Dict[str, Any]] = {}
-    total = len(all_stocks)
-
-    for i, ticker in enumerate(all_stocks):
-        progress_bar.progress(0.5 + (0.5 * (i + 1) / total), text=f"Fetching info for {ticker}...")
-
-        try:
-            info = fetch_stock_info(ticker)
-            if info:
-                stock_info[ticker] = info
-        except Exception:
-            stock_info[ticker] = {'ticker': ticker, 'name': ticker.replace('.NS', '')}
-
-        # Rate limiting: pause every 10 stocks to avoid hitting limits
-        if (i + 1) % 10 == 0 and i < total - 1:
-            time.sleep(1.5)
+    for ticker in all_stocks:
+        if ticker in metadata:
+            stock_info[ticker] = metadata[ticker]
         else:
-            rate_limited_sleep(0.2, 0.5)
+            stock_info[ticker] = {'name': ticker.replace('.NS', ''), 'sector': 'N/A', 'industry': 'N/A'}
 
-    progress_bar.empty()
-
-    # Save complete data to disk cache
+    # Save to disk cache
     result = (stock_data, stock_info)
     save_to_cache(cache_key, result)
 
     return result
+
+
+@st.cache_data(ttl=86400, show_spinner=False)  # 24 hours - dynamic data changes less
+def fetch_stock_info_lazy(ticker: str) -> Dict[str, Any]:
+    """
+    Fetch dynamic stock info (PE, PB, Market Cap, Dividend) for a specific ticker.
+    This is called ONLY when user selects a stock.
+    
+    Combines metadata with live data from yfinance.
+    """
+    # Start with metadata
+    metadata = load_stock_metadata()
+    info = metadata.get(ticker, {'name': ticker.replace('.NS', ''), 'sector': 'N/A', 'industry': 'N/A'})
+    
+    # Check session state cache first
+    cache_key = f"stock_info_{ticker}"
+    if cache_key in st.session_state:
+        return st.session_state[cache_key]
+    
+    # Fetch dynamic data from yfinance
+    try:
+        dynamic_info = fetch_stock_info(ticker)
+        if dynamic_info:
+            # Merge metadata with dynamic data
+            info.update({
+                'pe_ratio': dynamic_info.get('pe_ratio'),
+                'pb_ratio': dynamic_info.get('pb_ratio'),
+                'market_cap': dynamic_info.get('market_cap'),
+                'dividend_yield': dynamic_info.get('dividend_yield')
+            })
+    except Exception:
+        pass
+    
+    # Cache in session state
+    st.session_state[cache_key] = info
+    return info
 
 
 # =============================================================================

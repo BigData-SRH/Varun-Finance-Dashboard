@@ -1,0 +1,252 @@
+{
+  "RELIANCE.NS": {
+    "name": "Reliance Industries Ltd",
+    "sector": "Energy",
+    "industry": "Oil & Gas Refining & Marketing"
+  },
+  "TCS.NS": {
+    "name": "Tata Consultancy Services Ltd",
+    "sector": "Technology",
+    "industry": "IT Services & Consulting"
+  },
+  "HDFCBANK.NS": {
+    "name": "HDFC Bank Ltd",
+    "sector": "Financial Services",
+    "industry": "Banks - Private Sector"
+  },
+  "INFY.NS": {
+    "name": "Infosys Ltd",
+    "sector": "Technology",
+    "industry": "IT Services & Consulting"
+  },
+  "ICICIBANK.NS": {
+    "name": "ICICI Bank Ltd",
+    "sector": "Financial Services",
+    "industry": "Banks - Private Sector"
+  },
+  "HINDUNILVR.NS": {
+    "name": "Hindustan Unilever Ltd",
+    "sector": "Consumer Goods",
+    "industry": "FMCG"
+  },
+  "BHARTIARTL.NS": {
+    "name": "Bharti Airtel Ltd",
+    "sector": "Telecommunication",
+    "industry": "Telecom Services"
+  },
+  "SBIN.NS": {
+    "name": "State Bank of India",
+    "sector": "Financial Services",
+    "industry": "Banks - Public Sector"
+  },
+  "KOTAKBANK.NS": {
+    "name": "Kotak Mahindra Bank Ltd",
+    "sector": "Financial Services",
+    "industry": "Banks - Private Sector"
+  },
+  "WIPRO.NS": {
+    "name": "Wipro Ltd",
+    "sector": "Technology",
+    "industry": "IT Services & Consulting"
+  },
+  "HCLTECH.NS": {
+    "name": "HCL Technologies Ltd",
+    "sector": "Technology",
+    "industry": "IT Services & Consulting"
+  },
+  "TECHM.NS": {
+    "name": "Tech Mahindra Ltd",
+    "sector": "Technology",
+    "industry": "IT Services & Consulting"
+  },
+  "LT.NS": {
+    "name": "Larsen & Toubro Ltd",
+    "sector": "Industrials",
+    "industry": "Construction & Engineering"
+  },
+  "ITC.NS": {
+    "name": "ITC Ltd",
+    "sector": "Consumer Goods",
+    "industry": "Conglomerate"
+  },
+  "AXISBANK.NS": {
+    "name": "Axis Bank Ltd",
+    "sector": "Financial Services",
+    "industry": "Banks - Private Sector"
+  },
+  "TITAN.NS": {
+    "name": "Titan Company Ltd",
+    "sector": "Consumer Goods",
+    "industry": "Jewelry & Watches"
+  },
+  "ULTRACEMCO.NS": {
+    "name": "UltraTech Cement Ltd",
+    "sector": "Materials",
+    "industry": "Cement"
+  },
+  "SUNPHARMA.NS": {
+    "name": "Sun Pharmaceutical Industries Ltd",
+    "sector": "Healthcare",
+    "industry": "Pharmaceuticals"
+  },
+  "NESTLEIND.NS": {
+    "name": "Nestle India Ltd",
+    "sector": "Consumer Goods",
+    "industry": "Food Products"
+  },
+  "MARUTI.NS": {
+    "name": "Maruti Suzuki India Ltd",
+    "sector": "Automobile",
+    "industry": "Automobile Manufacturers"
+  },
+  "M&M.NS": {
+    "name": "Mahindra & Mahindra Ltd",
+    "sector": "Automobile",
+    "industry": "Automobile Manufacturers"
+  },
+  "TATAMOTORS.NS": {
+    "name": "Tata Motors Ltd",
+    "sector": "Automobile",
+    "industry": "Automobile Manufacturers"
+  },
+  "BAJFINANCE.NS": {
+    "name": "Bajaj Finance Ltd",
+    "sector": "Financial Services",
+    "industry": "NBFC"
+  },
+  "ASIANPAINT.NS": {
+    "name": "Asian Paints Ltd",
+    "sector": "Materials",
+    "industry": "Paints"
+  },
+  "NTPC.NS": {
+    "name": "NTPC Ltd",
+    "sector": "Utilities",
+    "industry": "Power Generation"
+  },
+  "POWERGRID.NS": {
+    "name": "Power Grid Corporation Ltd",
+    "sector": "Utilities",
+    "industry": "Power Transmission"
+  },
+  "ONGC.NS": {
+    "name": "Oil & Natural Gas Corporation Ltd",
+    "sector": "Energy",
+    "industry": "Oil & Gas Exploration"
+  },
+  "COALINDIA.NS": {
+    "name": "Coal India Ltd",
+    "sector": "Energy",
+    "industry": "Coal"
+  },
+  "ADANIPORTS.NS": {
+    "name": "Adani Ports & Special Economic Zone Ltd",
+    "sector": "Industrials",
+    "industry": "Port Services"
+  },
+  "JSWSTEEL.NS": {
+    "name": "JSW Steel Ltd",
+    "sector": "Materials",
+    "industry": "Steel"
+  },
+  "TATASTEEL.NS": {
+    "name": "Tata Steel Ltd",
+    "sector": "Materials",
+    "industry": "Steel"
+  },
+  "HINDALCO.NS": {
+    "name": "Hindalco Industries Ltd",
+    "sector": "Materials",
+    "industry": "Aluminium"
+  },
+  "BAJAJFINSV.NS": {
+    "name": "Bajaj Finserv Ltd",
+    "sector": "Financial Services",
+    "industry": "NBFC"
+  },
+  "HDFCLIFE.NS": {
+    "name": "HDFC Life Insurance Company Ltd",
+    "sector": "Financial Services",
+    "industry": "Life Insurance"
+  },
+  "SBILIFE.NS": {
+    "name": "SBI Life Insurance Company Ltd",
+    "sector": "Financial Services",
+    "industry": "Life Insurance"
+  },
+  "DIVISLAB.NS": {
+    "name": "Divi's Laboratories Ltd",
+    "sector": "Healthcare",
+    "industry": "Pharmaceuticals"
+  },
+  "DRREDDY.NS": {
+    "name": "Dr. Reddy's Laboratories Ltd",
+    "sector": "Healthcare",
+    "industry": "Pharmaceuticals"
+  },
+  "CIPLA.NS": {
+    "name": "Cipla Ltd",
+    "sector": "Healthcare",
+    "industry": "Pharmaceuticals"
+  },
+  "EICHERMOT.NS": {
+    "name": "Eicher Motors Ltd",
+    "sector": "Automobile",
+    "industry": "Automobile Manufacturers"
+  },
+  "HEROMOTOCO.NS": {
+    "name": "Hero MotoCorp Ltd",
+    "sector": "Automobile",
+    "industry": "Automobile Manufacturers"
+  },
+  "GRASIM.NS": {
+    "name": "Grasim Industries Ltd",
+    "sector": "Materials",
+    "industry": "Diversified"
+  },
+  "BRITANNIA.NS": {
+    "name": "Britannia Industries Ltd",
+    "sector": "Consumer Goods",
+    "industry": "Food Products"
+  },
+  "TATACONSUM.NS": {
+    "name": "Tata Consumer Products Ltd",
+    "sector": "Consumer Goods",
+    "industry": "Food Products"
+  },
+  "INDUSINDBK.NS": {
+    "name": "IndusInd Bank Ltd",
+    "sector": "Financial Services",
+    "industry": "Banks - Private Sector"
+  },
+  "BANDHANBNK.NS": {
+    "name": "Bandhan Bank Ltd",
+    "sector": "Financial Services",
+    "industry": "Banks - Private Sector"
+  },
+  "FEDERALBNK.NS": {
+    "name": "Federal Bank Ltd",
+    "sector": "Financial Services",
+    "industry": "Banks - Private Sector"
+  },
+  "IDFCFIRSTB.NS": {
+    "name": "IDFC First Bank Ltd",
+    "sector": "Financial Services",
+    "industry": "Banks - Private Sector"
+  },
+  "BANKBARODA.NS": {
+    "name": "Bank of Baroda",
+    "sector": "Financial Services",
+    "industry": "Banks - Public Sector"
+  },
+  "PNB.NS": {
+    "name": "Punjab National Bank",
+    "sector": "Financial Services",
+    "industry": "Banks - Public Sector"
+  },
+  "AUBANK.NS": {
+    "name": "AU Small Finance Bank Ltd",
+    "sector": "Financial Services",
+    "industry": "Banks - Private Sector"
+  }
+}

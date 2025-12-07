@@ -1,6 +1,8 @@
-# 📈 Finance Dashboard
+# Finance Dashboard
 
 An interactive Streamlit dashboard for analyzing NSE (National Stock Exchange of India) indices and their constituent stocks. Built with Python, powered by data from Yahoo Finance.
+
+**Author:** Varun H S | **LinkedIn:** [linkedin.com/in/varunhs306](https://www.linkedin.com/in/varunhs306)
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-red.svg)
@@ -9,22 +11,23 @@ An interactive Streamlit dashboard for analyzing NSE (National Stock Exchange of
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
-- [Key Performance Indicators](#-key-performance-indicators-kpis)
-- [Getting Started](#-getting-started)
-- [Docker Deployment](#-docker-deployment)
-- [Indices Covered](#-indices-covered)
-- [Dashboard Pages](#️-dashboard-pages)
-- [Tech Stack](#️-tech-stack)
-- [Project Structure](#-project-structure)
-- [Configuration](#️-configuration)
-- [Disclaimer](#️-disclaimer)
-- [License](#-license)
+- [Key Performance Indicators](#key-performance-indicators-kpis)
+- [Getting Started](#getting-started)
+- [Docker Deployment](#docker-deployment)
+- [Indices Covered](#indices-covered)
+- [Dashboard Pages](#dashboard-pages)
+- [Tech Stack](#tech-stack)
+- [Features](#features)
+- [Project Structure](#project-structure)
+- [Configuration](#configuration)
+- [Disclaimer](#disclaimer)
+- [License](#license)
 
 ---
 
-## 📊 Key Performance Indicators (KPIs)
+## Key Performance Indicators (KPIs)
 
 | Category | KPIs |
 |----------|------|
@@ -35,7 +38,7 @@ An interactive Streamlit dashboard for analyzing NSE (National Stock Exchange of
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ```bash
 # Clone the repository
@@ -53,7 +56,7 @@ The dashboard will open at `http://localhost:8501`
 
 ---
 
-## 🐳 Docker Deployment
+## Docker Deployment
 
 ### Using Docker Compose (Recommended)
 
@@ -82,7 +85,7 @@ The dashboard will be available at `http://localhost:8501`
 
 ---
 
-## 📈 Indices Covered
+## Indices Covered
 
 | Index | Ticker | Stocks | Description |
 |-------|--------|--------|-------------|
@@ -94,35 +97,23 @@ The dashboard will be available at `http://localhost:8501`
 
 ---
 
-## 🖥️ Dashboard Pages
+## Dashboard Pages
 
 ### Home
-- Real-time index cards with price and daily change
-- Normalized performance comparison with **time period filters** (1W, 1M, 6M, 1Y, 5Y, MAX)
-- Correlation heatmap between indices
-- Detailed analysis for selected index (CAGR, Volatility, Sharpe, Drawdown)
-- **Global Market Context**: Compare Indian indices against S&P 500, NASDAQ, FTSE 100, DAX, Nikkei 225, and Hang Seng
-- **Educational Section**: Learn what each metric means and how to invest in indices via ETFs and Index Funds
+Real-time index tracking, KPI summary cards (Performance/Risk/Technical), normalized performance charts with time filters, side-by-side index comparison, correlation analysis, global market benchmarking, and educational resources.
 
 ### Stock Explorer
-- Filter by index and sector
-- Individual stock KPIs: CAGR, Volatility, Beta, PE Ratio, Dividend Yield
-- **Corporate Events** tab: Dividend history, stock splits, upcoming earnings
-- Risk-return scatter visualization
+Card-based metrics layout, technical indicators with visual badges, price history charts, performance analysis, corporate events tracking, and risk-return visualization.
 
 ### Portfolio
-- Top performers by returns, Sharpe ratio, and dividends
-- Value opportunities (Low PE with strong CAGR)
-- AI-suggested diversified portfolio based on composite scoring
+Top performers analysis, value opportunities identification, and AI-suggested diversified portfolio recommendations.
 
 ### About
-- Methodology documentation
-- Data quality scoring system
-- Full list of index constituents
+Methodology documentation, data quality scoring, and complete index constituents listing.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Framework:** Streamlit
 - **Data Source:** Yahoo Finance via [yfinance](https://github.com/ranaroussi/yfinance)
@@ -131,7 +122,17 @@ The dashboard will be available at `http://localhost:8501`
 
 ---
 
-## 📁 Project Structure
+## Features
+
+- **Interactive Cards**: Hover effects and visual depth with enhanced shadows
+- **Real-time Data**: Live market data from Yahoo Finance
+- **Technical Analysis**: RSI, Moving Averages, 52-week highs/lows
+- **Global Comparison**: Benchmark Indian indices against global markets
+- **Responsive Design**: Clean, modern UI with organized layouts
+
+---
+
+## Project Structure
 
 ```
 ├── Home.py                 # Main entry point
@@ -154,7 +155,7 @@ The dashboard will be available at `http://localhost:8501`
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 Edit `utils/config.py` to customize:
 
@@ -166,7 +167,7 @@ CONSTITUENTS = {...}           # Index member stocks
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 This dashboard is for **educational and informational purposes only**. It does not constitute financial advice. Past performance is not indicative of future results. Always consult a qualified financial advisor before making investment decisions.
 
@@ -174,6 +175,6 @@ Market data is sourced from Yahoo Finance via the [yfinance](https://github.com/
 
 ---
 
-## 📜 License
+## License
 
-MIT License © 2025
+MIT License © 2025 Varun H S | LinkedIn: [linkedin.com/in/varunhs306](https://www.linkedin.com/in/varunhs306)
